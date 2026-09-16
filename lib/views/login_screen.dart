@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../models/sessao_usuario.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 import 'home_screen.dart';
+import 'tela_cadastro.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,10 +18,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
+    SessaoUsuario.instance.login(email: _emailController.text);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute<void>(builder: (context) => const HomeScreen()),
@@ -31,7 +35,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _register() {
-    // Adicionar a navegação para Cadastro quando a tela estiver disponível.
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (context) => const TelaCadastro()),
+    );
   }
 
   @override
@@ -118,8 +125,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           label: 'Senha',
                           hintText: 'Digite sua senha',
                           controller: _passwordController,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'Informe sua senha.';
