@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
+import 'tela_perfil.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -42,13 +43,24 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      const CircleAvatar(
-                        radius: 24,
-                        backgroundColor: AppColors.primary,
-                        child: Icon(
-                          Icons.person_outline,
-                          color: AppColors.card,
-                          semanticLabel: 'Perfil',
+                      InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (context) => const TelaPerfil(),
+                            ),
+                          );
+                        },
+                        child: const CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColors.primary,
+                          child: Icon(
+                            Icons.person_outline,
+                            color: AppColors.card,
+                            semanticLabel: 'Perfil',
+                          ),
                         ),
                       ),
                     ],
@@ -202,8 +214,15 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: AppColors.card,
         indicatorColor: AppColors.highlight,
         elevation: 0,
-        onDestinationSelected: (_) {
-          // A navegação será integrada quando as telas estiverem disponíveis.
+        onDestinationSelected: (index) {
+          if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (context) => const TelaPerfil(),
+              ),
+            );
+          }
         },
         destinations: const [
           NavigationDestination(
@@ -213,10 +232,17 @@ class HomeScreen extends StatelessWidget {
           ),
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
             label: 'Estudos',
           ),
           NavigationDestination(
+            icon: Icon(Icons.emoji_events_outlined),
+            selectedIcon: Icon(Icons.emoji_events),
+            label: 'Conquistas',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
             label: 'Perfil',
           ),
         ],

@@ -9,6 +9,7 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType,
     this.prefixIcon,
+    this.suffixIcon,
     this.validator,
   });
 
@@ -18,6 +19,7 @@ class AppTextField extends StatelessWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final Widget? prefixIcon;
+  final Widget? suffixIcon;
   final FormFieldValidator<String>? validator;
 
   @override
@@ -31,6 +33,7 @@ class AppTextField extends StatelessWidget {
         labelText: label,
         hintText: hintText,
         prefixIcon: prefixIcon,
+        suffixIcon: suffixIcon,
       ),
     );
   }
