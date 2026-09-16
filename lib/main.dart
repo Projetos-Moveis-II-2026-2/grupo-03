@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'views/home_screen.dart';
+import 'views/login_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'FocoDeck',
       theme: AppTheme.lightTheme,
-      home: const HomeScreen(),
+      home: const LoginScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
