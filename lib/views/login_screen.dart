@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +20,10 @@ class _LoginScreenState extends State<LoginScreen> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    // A autenticação será integrada em uma próxima etapa.
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute<void>(builder: (context) => const HomeScreen()),
+    );
   }
 
   void _forgotPassword() {
