@@ -5,7 +5,7 @@
 - **Etapa:** 1
 - **Título:** Estrutura Base, Autenticação e Design System Minimalista (Baixo Estímulo Cognitivo para TDAH)
 - **Dupla Responsável:** **Maria** e **Emily**
-- **Status da Etapa:** Concluída (Pendente Persistência em Disco)
+- **Status da Etapa:** Concluída com Ressalva Técnica (Persistência Local Pendente)
 
 ---
 
@@ -35,15 +35,15 @@
 
 ---
 
-## 4. Diagnóstico e Revisão Técnica da Etapa 1
+## 4. Relatório Técnico de Conformidade da Etapa 1
 
-### O que foi entregue com sucesso:
-1. **Arquitetura Base:** Projeto organizado modularmente em pastas (`models/`, `views/`, `widgets/`, `theme/`).
-2. **Design System:** Implementado e aderente à proposta de redução da carga cognitiva.
-3. **Autenticação e Perfil:** Telas integradas com navegação funcional entre Login, Cadastro, Home e Perfil.
+### Módulos Concluídos e Validados:
+1. **Arquitetura Base:** Projeto organizado de maneira modular em camadas (`models/`, `views/`, `widgets/`, `theme/`), com suporte multiplataforma e compilação estável.
+2. **Design System Minimalista:** Implementado com foco em redução de carga cognitiva, alto contraste (WCAG) e áreas de toque acessíveis.
+3. **Fluxos de Autenticação e Perfil:** Telas integradas com navegação funcional entre Login, Cadastro, Home e Perfil com validação de formulários.
 
-### Pendência identificada:
-1. **Persistência de Sessão Local em Disco:**
-   - Atualmente, os dados da sessão (`SessaoUsuario`) residem unicamente em **memória RAM** (`Map<String, String> _usuariosCadastrados`).
-   - Ao fechar o aplicativo ou recarregar a sessão, os dados cadastrados e o login são redefinidos.
-   - **Encaminhamento:** Será resolvido definitivamente na Etapa 3 com o **Supabase Auth**, que implementa persistência de sessão segura via token JWT em disco.
+### Relato de Pendência Técnica da Etapa 1:
+- **Item do Escopo Afetado:** *"persistência de sessão local"*.
+- **Diagnóstico Técnico:** A persistência da sessão do usuário foi estruturada em memória volátil (RAM) dentro da classe `SessaoUsuario` (`Map<String, String> _usuariosCadastrados`). Não houve persistência física em disco local (como `shared_preferences`, `sqflite` ou `hive`).
+- **Impacto no Sistema:** Ao encerrar o ciclo de vida do processo móvel ou reiniciar o aplicativo, o token de sessão e os dados recém-cadastrados não são retidos no dispositivo, exigindo novo login.
+- **Plano de Resolução Técnica:** A equipe definiu que essa persistência não será resolvida com banco local temporário para evitar redundância de código, mas sim na **Etapa 3** através da integração com o **Supabase Auth**, cuja biblioteca cliente gerencia nativamente o armazenamento seguro e persistente de tokens JWT em disco criptografado.

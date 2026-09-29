@@ -23,14 +23,14 @@ O projeto é desenvolvido em ciclos semanais por uma equipe de 4 integrantes org
 
 | Etapa | Escopo da Entrega | Status | Responsáveis (Dupla) |
 | :---: | :--- | :---: | :---: |
-| **Etapa 1** | **Estrutura Base, Autenticação e Design System:** Arquitetura móvel inicial, Design System de baixo estímulo, fluxo de login, cadastro e perfil de usuário. | Concluída (Pendente Persistência em Disco) | **Maria e Emily** |
-| **Etapa 2** | **Módulo Questões (Inglês para TDAH):** Lógica e interface de Flashcards e Quiz/Simulados em blocos curtos, e algoritmo de Repetição Espaçada (SRS). | **Em Desenvolvimento (Etapa Atual)** | **JP e Raquel** |
+| **Etapa 1** | **Estrutura Base, Autenticação e Design System:** Arquitetura móvel inicial, Design System de baixo estímulo, fluxo de login, cadastro e perfil de usuário. | Concluída com Ressalva Técnica (Persistência em disco pendente, postergada para o Supabase Auth na Etapa 3) | **Maria e Emily** |
+| **Etapa 2** | **Módulo Questões (Inglês para TDAH):** Lógica e interface de Flashcards e Quiz/Simulados em blocos curtos, e algoritmo de Repetição Espaçada (SRS). | **Em Desenvolvimento** (UI/UX do JP concluída; Algoritmo SRS da Raquel em andamento) | **JP e Raquel** |
 | **Etapa 3** | **Conexão com Banco Remoto (Supabase REST API):** Sincronização dinâmica de decks de vocabulário em inglês, histórico de revisões e tratamento assíncrono. | Aguardando Etapa 2 | **Maria e Emily** |
 | **Etapa 4** | **Gamificação Leve para TDAH, Testes e Entrega Final:** Reforço positivo aleatório, testes automatizados e build final para Android (APK). | Aguardando Etapa 3 | **JP e Raquel** |
 
 ### Divisão de Papéis na Etapa Atual (Etapa 2):
-- **JP:** UI/UX, Navegação em Blocos Curtos, Seleção de Decks, Componente Visual de Flashcard (Flip frente/verso), Interface de Quiz/Simulado e Tela de Conclusão de Bloco.
-- **Raquel:** Algoritmo Central de Repetição Espaçada (SRS), Modelagem de Dados (`CardIngles`, `QuizQuestao`, `BlocoEstudo`), Controller de Fluxo e Fila Dinâmica de Revisão.
+- **JP (UI/UX & Apresentação):** Telas de estudo em blocos curtos, seleção de temas/decks, componente visual de Flashcard (flip 3D, fonética brasileira e autoavaliação), interface de Quiz/Simulado e navegação geral — **Concluído**.
+- **Raquel (Lógica & Algoritmo):** Algoritmo central de Repetição Espaçada (SRS), modelagem das entidades de repetição, controller de fluxo de sessão e fila dinâmica — **Em andamento**.
 
 ---
 

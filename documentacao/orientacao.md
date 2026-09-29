@@ -22,14 +22,14 @@ A equipe é composta por 4 integrantes organizados em duplas fixas que alternam 
 
 | Etapa | Foco da Entrega | Status | Responsáveis (Dupla) |
 | :---: | :--- | :---: | :---: |
-| **Etapa 1** | **Estrutura Base, Autenticação e Design System:** Arquitetura móvel, design system minimalista (baixo estímulo), autenticação, perfil e sessão. | Concluída (Pendente Persistência em Disco) | **Maria e Emily** |
-| **Etapa 2** | **Módulo Questões (Inglês para TDAH):** Lógica e interface de Flashcards e Quiz/Simulados de inglês em blocos curtos, e algoritmo de Repetição Espaçada (SRS). | **Em Desenvolvimento (Etapa Atual)** | **JP e Raquel** |
+| **Etapa 1** | **Estrutura Base, Autenticação e Design System:** Arquitetura móvel, design system minimalista (baixo estímulo), autenticação, perfil e sessão. | Concluída com Ressalva Técnica (Persistência em disco pendente, postergada para o Supabase Auth na Etapa 3) | **Maria e Emily** |
+| **Etapa 2** | **Módulo Questões (Inglês para TDAH):** Lógica e interface de Flashcards e Quiz/Simulados de inglês em blocos curtos, e algoritmo de Repetição Espaçada (SRS). | **Em Desenvolvimento** (UI/UX do JP concluída; Algoritmo SRS da Raquel em andamento) | **JP e Raquel** |
 | **Etapa 3** | **Conexão com Banco Remoto (Supabase REST API):** Sincronização dinâmica de decks de vocabulário em inglês, histórico de revisões e tratamento assíncrono. | Aguardando Etapa 2 | **Maria e Emily** |
 | **Etapa 4** | **Gamificação Leve para TDAH, Testes e Entrega Final:** Reforço positivo aleatório, streaks sem punição desmotivadora, testes e build de produção. | Aguardando Etapa 3 | **JP e Raquel** |
 
 ### Divisão da Etapa 2 (Atual):
-- **JP:** UI/UX, Telas de Estudo em Blocos Curtos, Decks, Flashcard Interativo (Flip) e Interface de Quiz/Simulado.
-- **Raquel:** Algoritmo Central de Repetição Espaçada (SRS), Modelagem de Dados, Controller de Fluxo e Fila Dinâmica.
+- **JP (UI/UX & Apresentação):** Telas de estudo em blocos curtos, seleção de temas/decks, componente visual de Flashcard (flip 3D, fonética brasileira e autoavaliação), interface de Quiz/Simulado e navegação geral — **Concluído**.
+- **Raquel (Lógica & Algoritmo):** Algoritmo central de Repetição Espaçada (SRS), modelagem das entidades de repetição, controller de fluxo de sessão e fila dinâmica — **Em andamento**.
 
 > O padrão completo de cores, fontes, botões, inputs e layouts está catalogado e documentado em:
 > 👉 `documentacao/guia-de-estilo.md`

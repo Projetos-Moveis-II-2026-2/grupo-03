@@ -5,7 +5,7 @@
 - **Etapa:** 2
 - **Título:** Módulo Questões: Ferramentas de Estudo Dinâmico de Inglês (Flashcards & Simulados) em Blocos Curtos e Algoritmo de Revisão Espaçada (SRS)
 - **Dupla Responsável:** **JP** e **Raquel**
-- **Status da Etapa:** **Em Desenvolvimento (Etapa Atual da Dupla)**
+- **Status da Etapa:** **Em Desenvolvimento (Frente de UI/UX Concluída; Frente de Algoritmo em Andamento)**
 
 ---
 
@@ -18,51 +18,50 @@
 ## 3. Diretrizes de Aprendizado de Inglês para Pessoas com TDAH
 
 1. **Estudo em Blocos Curtos (Micro-learning):**
-   - Sessões intencionalmente curtas (máximo de 5 flashcards ou 4 questões de quiz por bloco).
-   - Evita a sobrecarga da memória de trabalho e impede a fadiga cognitiva rápida comum no TDAH.
+   - Sessões limitadas a 3 a 5 cartões/questões por bloco para respeitar os limites da memória de trabalho e evitar fadiga mental rápida.
 2. **Algoritmo de Revisão Espaçada (SRS) Adaptativo:**
-   - Atua como a **espinha dorsal das funções executivas**, retirando do estudante a necessidade de planejar o que deve revisar no dia.
-   - Vocabulários em inglês com maior índice de erro reaparecem ainda dentro do mesmo bloco para fixação ativa por repetição imediata.
-   - Vocábulos consolidados têm seu espaçamento aumentado (ex: 1 dia, 3 dias, 7 dias).
-   - **Mecanismo anti-ansiedade:** Não gera pilhas punitivas de dezenas de cards acumulados caso o estudante passe dias sem abrir o app.
+   - Suporte direto às funções executivas, automatizando o agendamento de revisão para evitar fadiga de decisão e sobrecarga cognitiva.
+   - Vocabulários com autoavaliação de erro/revisão reaparecem dinamicamente no mesmo bloco para consolidação ativa imediata.
+   - Vocábulos dominados recebem ampliação progressiva de intervalo de revisão.
 3. **Reforço Ativo com Quiz e Simulados:**
-   - Fixação do vocabulário através de associação direta (palavra em inglês -> contexto/imagem/frase em português -> escolha de alternativa).
-   - Feedback instantâneo (reforço positivo imediato para ativação dopaminérgica).
+   - Fixação do vocabulário através de associação direta com feedback visual imediato (verde/vermelho) e breve contextualização didática.
+   - Ausência de temporizadores regressivos para evitar ansiedade de desempenho.
 
 ---
 
-## 4. Divisão de Responsabilidades da Dupla
+## 4. Divisão de Responsabilidades e Status de Execução
 
-### 👤 JP (UI/UX, Navegação em Blocos Curtos & Interfaces de Estudo)
-- **Tela de Seleção de Baralhos de Inglês:**
-  - Categorias temáticas práticas (ex: *Daily Routine*, *Travel Essentials*, *Work & Tech*, *Common Phrasal Verbs*).
-  - Indicador visual limpo da quantidade de blocos curtos disponíveis no dia.
-- **Componente Visual de Flashcard Interativo:**
-  - Animação de virada rápida (flip de 250ms) entre frente (termo em inglês + pronúncia fonética + frase contextual) e verso (tradução + dica visual).
-  - Botões de autoavaliação com toque amplo e cores acessíveis (*Preciso rever*, *Entendi*, *Fácil*).
-- **Interface de Quiz / Simulado Rápido:**
-  - Layout focado em uma única pergunta por vez, com alternativas em botões confortáveis e sem contadores regressivos estressantes.
-- **Tela de Conclusão do Bloco:**
-  - Resumo de palavras aprendidas/revisadas no bloco (ex: "🎉 Você dominou 5 novas palavras!").
+### 👤 JP (UI/UX, Navegação em Blocos Curtos & Interfaces de Estudo) — Status: CONCLUÍDO
+- **Tela de Seleção de Baralhos de Inglês (`lib/views/tela_decks_ingles.dart`):**
+  - Categorias temáticas práticas (*Foco & Produtividade*, *Daily Routine*, *Travel Essentials*) em blocos curtos.
+- **Componente Visual de Flashcard Interativo (`lib/widgets/flashcard_widget.dart`):**
+  - Animação suave de virada 3D (flip de 280ms) entre frente e verso com perspectiva espacial.
+  - Exibição de pronúncia adaptada ao português brasileiro com sílaba tônica em caixa alta e ícone sonoro (`card_ingles.dart`).
+  - Botão de virada de cartão explícito no verso e botões de autoavaliação (*Rever*, *Bom*, *Fácil*).
+- **Interface de Quiz / Simulado Rápido (`lib/views/tela_simulado_ingles.dart`):**
+  - 5 questões de múltipla escolha com feedback de validação em tempo real e explicações didáticas.
+  - Tela de resultado exibindo total de acertos e taxa percentual de aproveitamento.
+- **Fluxo de Navegação e Conclusão (`lib/views/tela_estudo_flashcards.dart`):**
+  - Barra de progresso minimalista, conclusão de bloco com métricas de estudo e redirecionamento para escolha de novo tema.
+  - Conexão de todas as rotas a partir da tela principal (`lib/views/home_screen.dart`).
 
-### 👤 Raquel (Algoritmo SRS, Modelagem de Dados & Gerenciador do Fluxo)
-- **Modelagem das Entidades de Inglês:**
-  - `CardIngles`: Id, termo em inglês, tradução, frase de exemplo, nível de dificuldade, data da última revisão, intervalo de repetição (dias) e fator de facilidade (Ease Factor).
-  - `QuizQuestao`: Id, enunciado, opções de resposta, índice correto e explicação didática rápida.
-  - `BlocoEstudo`: Estrutura controladora dos itens ativos na sessão atual.
+### 👤 Raquel (Algoritmo SRS, Modelagem de Dados & Gerenciador do Fluxo) — Status: EM ANDAMENTO
+- **Modelagem das Entidades de Domínio:**
+  - Estruturação dos parâmetros de cálculo de facilidade e agendamento da repetição espaçada.
 - **Implementação do Algoritmo Central de Revisão Espaçada (SRS):**
-  - Cálculo de agendamento baseado na resposta do usuário (*Difícil*, *Bom*, *Fácil*).
-  - Reordenação dinâmica da fila da sessão (cards que o usuário errou voltam ao fim do bloco atual para fixação imediata).
+  - Regra de cálculo de intervalos de revisão com base no desempenho do estudante.
+  - Fila dinâmica de reapresentação de cartões dentro e fora da sessão.
 - **Gerenciador de Estado do Estudo (Controller):**
-  - Controle de avanço de questão/card, cálculo de acertos e sinalização de término de bloco.
-  - Preparação para exportação e sincronização com o Supabase na Etapa 3.
+  - Desacoplamento da lógica de negócio das telas visuais, preparando a integração com o Supabase da Etapa 3.
 
 ---
 
 ## 5. Critérios de Aceitação e Checklist da Dupla
 
-- [ ] O usuário consegue estudar vocabulário de inglês em blocos limitados (máximo de 5 a 7 itens por vez).
-- [ ] A interação com os flashcards é fluida, sem distrações e com tipografia legível.
-- [ ] O simulado/quiz de inglês valida a alternativa escolhida e exibe explicação imediata.
-- [ ] O algoritmo de repetição espaçada recalcula o próximo ciclo de revisão da palavra avaliada.
-- [ ] O design segue à risca o padrão minimalista aprovado na Etapa 1.
+- [x] O usuário consegue navegar entre baralhos temáticos de inglês em blocos curtos.
+- [x] O componente visual de Flashcard possui animação de flip 3D suave e suporte a pronúncia figurada brasileira com entonação tônica.
+- [x] O verso do cartão disponibiliza botões de autoavaliação e botão acessível para retorno da face.
+- [x] A tela de simulado valida a alternativa escolhida de forma imediata e exibe explicação clara.
+- [x] O fluxo da sessão conclui com métricas objetivas e opção para selecionar outro tema.
+- [ ] O algoritmo de repetição espaçada recalcula o próximo ciclo de revisão da palavra avaliada (Raquel).
+- [ ] A fila inteligente gerencia dinamicamente os cards pendentes do dia (Raquel).
