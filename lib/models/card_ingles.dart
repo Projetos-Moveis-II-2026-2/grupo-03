@@ -18,12 +18,13 @@ class CardIngles {
     required this.categoria,
   });
 
-  /// Lista padrão de vocabulários essenciais para o bloco inicial de estudos.
+  /// Lista padrão com pronúncia figurada para o português brasileiro
+  /// e sílaba tônica em MAIÚSCULAS para indicar a entonação correta.
   static const List<CardIngles> cardsIniciais = [
     CardIngles(
       id: 'card_1',
       termo: 'Focus',
-      fonetica: '/ˈfoʊ.kəs/',
+      fonetica: 'FÔU-kâs',
       traducao: 'Foco / Concentração',
       exemploIngles: 'Take a deep breath and keep your focus on this task.',
       traducaoExemplo: 'Respire fundo e mantenha seu foco nesta tarefa.',
@@ -32,7 +33,7 @@ class CardIngles {
     CardIngles(
       id: 'card_2',
       termo: 'Breakdown',
-      fonetica: '/ˈbreɪk.daʊn/',
+      fonetica: 'BRÊIK-daun',
       traducao: 'Dividir em partes menores',
       exemploIngles: 'Breakdown large goals into short, actionable steps.',
       traducaoExemplo: 'Divida metas grandes em passos curtos e executáveis.',
@@ -41,7 +42,7 @@ class CardIngles {
     CardIngles(
       id: 'card_3',
       termo: 'Consistency',
-      fonetica: '/kənˈsɪs.tən.si/',
+      fonetica: 'kân-SÍS-tên-si',
       traducao: 'Consistência / Constância',
       exemploIngles: 'Small daily consistency brings extraordinary results.',
       traducaoExemplo: 'Pequena consistência diária traz resultados extraordinários.',
@@ -50,7 +51,7 @@ class CardIngles {
     CardIngles(
       id: 'card_4',
       termo: 'Achievement',
-      fonetica: '/əˈtʃiːv.mənt/',
+      fonetica: 'a-TCHÍIV-mênt',
       traducao: 'Conquista / Realização',
       exemploIngles: 'Celebrate every single achievement, no matter how small.',
       traducaoExemplo: 'Celebre cada conquista, por menor que seja.',
@@ -59,7 +60,7 @@ class CardIngles {
     CardIngles(
       id: 'card_5',
       termo: 'Reward',
-      fonetica: '/rɪˈwɔːrd/',
+      fonetica: 'ri-WÓRD',
       traducao: 'Recompensa / Prêmio',
       exemploIngles: 'Give your brain a healthy reward after completing a block.',
       traducaoExemplo: 'Dê ao seu cérebro uma recompensa saudável após concluir um bloco.',

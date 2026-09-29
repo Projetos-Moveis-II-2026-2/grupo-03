@@ -43,7 +43,7 @@ class TelaDecksIngles extends StatelessWidget {
         CardIngles(
           id: 'rt_1',
           termo: 'Wake up',
-          fonetica: '/weɪk ʌp/',
+          fonetica: 'UÊIK-âp',
           traducao: 'Acordar',
           exemploIngles: 'I wake up at seven every morning.',
           traducaoExemplo: 'Eu acordo às sete toda manhã.',
@@ -52,7 +52,7 @@ class TelaDecksIngles extends StatelessWidget {
         CardIngles(
           id: 'rt_2',
           termo: 'Get ready',
-          fonetica: '/ɡet ˈred.i/',
+          fonetica: 'GÉT-ré-di',
           traducao: 'Se arrumar / Preparar-se',
           exemploIngles: 'Take ten minutes to get ready.',
           traducaoExemplo: 'Tire dez minutos para se arrumar.',
@@ -61,7 +61,7 @@ class TelaDecksIngles extends StatelessWidget {
         CardIngles(
           id: 'rt_3',
           termo: 'Schedule',
-          fonetica: '/ˈskedʒ.uːl/',
+          fonetica: 'SKÉ-djuul',
           traducao: 'Cronograma / Horário',
           exemploIngles: 'Check your study schedule today.',
           traducaoExemplo: 'Verifique seu cronograma de estudos hoje.',
@@ -70,7 +70,7 @@ class TelaDecksIngles extends StatelessWidget {
         CardIngles(
           id: 'rt_4',
           termo: 'Break',
-          fonetica: '/breɪk/',
+          fonetica: 'BRÊIK',
           traducao: 'Pausa / Intervalo',
           exemploIngles: 'Take a short break between tasks.',
           traducaoExemplo: 'Faça uma pausa curta entre as tarefas.',
@@ -87,7 +87,7 @@ class TelaDecksIngles extends StatelessWidget {
         CardIngles(
           id: 'tr_1',
           termo: 'Boarding pass',
-          fonetica: '/ˈbɔːr.dɪŋ ˌpæs/',
+          fonetica: 'BÓR-ding-pés',
           traducao: 'Cartão de embarque',
           exemploIngles: 'Please show your boarding pass at the gate.',
           traducaoExemplo: 'Por favor, mostre seu cartão de embarque no portão.',
@@ -96,7 +96,7 @@ class TelaDecksIngles extends StatelessWidget {
         CardIngles(
           id: 'tr_2',
           termo: 'Directions',
-          fonetica: '/dɪˈrek.ʃənz/',
+          fonetica: 'di-RÉK-chânz',
           traducao: 'Direções / Orientações',
           exemploIngles: 'Can you give me directions to the station?',
           traducaoExemplo: 'Você pode me dar orientações para a estação?',
@@ -105,7 +105,7 @@ class TelaDecksIngles extends StatelessWidget {
         CardIngles(
           id: 'tr_3',
           termo: 'Luggage',
-          fonetica: '/ˈlʌɡ.ɪdʒ/',
+          fonetica: 'LÂ-guidj',
           traducao: 'Bagagem',
           exemploIngles: 'Keep your luggage close to you.',
           traducaoExemplo: 'Mantenha sua bagagem perto de você.',
