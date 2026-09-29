@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
+import 'tela_estudo_flashcards.dart';
 import 'tela_perfil.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -156,7 +157,12 @@ class HomeScreen extends StatelessWidget {
                           child: AppButton(
                             text: 'Começar agora',
                             onPressed: () {
-                              // A revisão será implementada em outra etapa.
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (context) => const TelaEstudoFlashcards(),
+                                ),
+                              );
                             },
                           ),
                         ),
@@ -171,12 +177,20 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const _AdaptivePair(
+                  _AdaptivePair(
                     first: _StudyCard(
                       title: 'Flashcards',
                       subtitle: 'Revise seus conteúdos',
                       icon: Icons.style_outlined,
                       accent: AppColors.primary,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (context) => const TelaEstudoFlashcards(),
+                          ),
+                        );
+                      },
                     ),
                     second: _StudyCard(
                       title: 'Simulados',
@@ -303,26 +317,32 @@ class _StudyCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.accent,
+    this.onTap,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
   final Color accent;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return _HomeCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: accent, size: 32),
-          const SizedBox(height: 16),
-          Text(title, style: textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(subtitle, style: textTheme.bodyMedium),
-        ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: _HomeCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: accent, size: 32),
+            const SizedBox(height: 16),
+            Text(title, style: textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(subtitle, style: textTheme.bodyMedium),
+          ],
+        ),
       ),
     );
   }
