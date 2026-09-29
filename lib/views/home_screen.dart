@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
+import 'tela_decks_ingles.dart';
 import 'tela_estudo_flashcards.dart';
 import 'tela_perfil.dart';
 
@@ -187,7 +188,7 @@ class HomeScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute<void>(
-                            builder: (context) => const TelaEstudoFlashcards(),
+                            builder: (context) => const TelaDecksIngles(),
                           ),
                         );
                       },
