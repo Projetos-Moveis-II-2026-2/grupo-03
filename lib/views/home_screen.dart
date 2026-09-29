@@ -5,6 +5,7 @@ import '../widgets/app_button.dart';
 import 'tela_decks_ingles.dart';
 import 'tela_estudo_flashcards.dart';
 import 'tela_perfil.dart';
+import 'tela_simulado_ingles.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -198,6 +199,14 @@ class HomeScreen extends StatelessWidget {
                       subtitle: 'Teste seus conhecimentos',
                       icon: Icons.quiz_outlined,
                       accent: AppColors.success,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (context) => const TelaSimuladoIngles(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 32),
