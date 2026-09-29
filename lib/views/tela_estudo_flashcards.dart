@@ -4,6 +4,8 @@ import '../models/card_ingles.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
 import '../widgets/flashcard_widget.dart';
+import 'home_screen.dart';
+import 'tela_decks_ingles.dart';
 
 /// Tela de estudo dinâmico de Flashcards de Inglês em blocos curtos,
 /// projetada para manter o foco e evitar sobrecarga cognitiva em estudantes com TDAH.
@@ -230,12 +232,27 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
           const SizedBox(height: 28),
 
           AppButton(
-            text: 'Revisar outro bloco',
-            onPressed: _iniciarBloco,
+            text: 'Fazer outro tema',
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (context) => const TelaDecksIngles(),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
           OutlinedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (context) => const HomeScreen(),
+                ),
+                (route) => false,
+              );
+            },
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(
