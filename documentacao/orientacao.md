@@ -27,6 +27,10 @@ A equipe é composta por 4 integrantes organizados em duplas fixas que alternam 
 | **Etapa 3** | **Conexão com Banco Remoto (Supabase REST API):** Sincronização dinâmica de decks de vocabulário em inglês, histórico de revisões e tratamento assíncrono. | Aguardando Etapa 2 | **Maria e Emily** |
 | **Etapa 4** | **Gamificação Leve para TDAH, Testes e Entrega Final:** Reforço positivo aleatório, streaks sem punição desmotivadora, testes e build de produção. | Aguardando Etapa 3 | **JP e Raquel** |
 
+### Divisão da Etapa 2 (Atual):
+- **JP:** UI/UX, Telas de Estudo em Blocos Curtos, Decks, Flashcard Interativo (Flip) e Interface de Quiz/Simulado.
+- **Raquel:** Algoritmo Central de Repetição Espaçada (SRS), Modelagem de Dados, Controller de Fluxo e Fila Dinâmica.
+
 > O padrão completo de cores, fontes, botões, inputs e layouts está catalogado e documentado em:
 > 👉 `documentacao/guia-de-estilo.md`
 

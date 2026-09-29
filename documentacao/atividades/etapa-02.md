@@ -33,7 +33,7 @@
 
 ## 4. Divisão de Responsabilidades da Dupla
 
-### 👤 Raquel (UI/UX, Navegação em Blocos Curtos & Interfaces de Estudo)
+### 👤 JP (UI/UX, Navegação em Blocos Curtos & Interfaces de Estudo)
 - **Tela de Seleção de Baralhos de Inglês:**
   - Categorias temáticas práticas (ex: *Daily Routine*, *Travel Essentials*, *Work & Tech*, *Common Phrasal Verbs*).
   - Indicador visual limpo da quantidade de blocos curtos disponíveis no dia.
@@ -45,7 +45,7 @@
 - **Tela de Conclusão do Bloco:**
   - Resumo de palavras aprendidas/revisadas no bloco (ex: "🎉 Você dominou 5 novas palavras!").
 
-### 👤 JP (Algoritmo SRS, Modelagem de Dados & Gerenciador do Fluxo)
+### 👤 Raquel (Algoritmo SRS, Modelagem de Dados & Gerenciador do Fluxo)
 - **Modelagem das Entidades de Inglês:**
   - `CardIngles`: Id, termo em inglês, tradução, frase de exemplo, nível de dificuldade, data da última revisão, intervalo de repetição (dias) e fator de facilidade (Ease Factor).
   - `QuizQuestao`: Id, enunciado, opções de resposta, índice correto e explicação didática rápida.
