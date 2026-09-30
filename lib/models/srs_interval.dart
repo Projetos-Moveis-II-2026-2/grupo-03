@@ -42,16 +42,22 @@ class SrsInterval {
   /// Atualiza o intervalo com base no resultado da última tentativa.
   ///
   /// - `correct` – `true` se o usuário acertou a questão.
+  /// - `isEasy` - `true` se o usuário achou muito fácil, o que turbina o intervalo.
   /// - Retorna a própria instância para permitir encadeamento.
-  SrsInterval update(bool correct) {
+  SrsInterval update(bool correct, {bool isEasy = false}) {
     if (correct) {
       // Acertou – aumenta a sequência de repetições.
       repetition += 1;
+      
+      if (isEasy) {
+        easeFactor += 0.15; // Turbina a facilidade
+      }
+
       // Primeiro e segundo acertos têm intervalos fixos.
       if (repetition == 1) {
-        intervalDays = 1; // 1 dia
+        intervalDays = isEasy ? 4 : 1; 
       } else if (repetition == 2) {
-        intervalDays = 6; // 6 dias
+        intervalDays = isEasy ? 10 : 6; 
       } else {
         // A partir da terceira repetição, usa o fator de facilidade.
         intervalDays = (intervalDays * easeFactor).round();

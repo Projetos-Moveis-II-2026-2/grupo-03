@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../controllers/flashcard_controller.dart';
+import '../repositories/flashcard_repository.dart';
 import '../models/card_ingles.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
@@ -24,48 +26,25 @@ class TelaEstudoFlashcards extends StatefulWidget {
 }
 
 class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
-  late List<CardIngles> _filaCards;
-  int _indiceAtual = 0;
-  int _cardsRevisadosComSucesso = 0;
-  int _cardsParaRepetir = 0;
-  bool _blocoFinalizado = false;
+  late final FlashcardController _controller;
 
   @override
   void initState() {
     super.initState();
-    _iniciarBloco();
+    _controller = FlashcardController(FlashcardRepository());
+    _controller.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
-  void _iniciarBloco() {
-    setState(() {
-      _filaCards = List<CardIngles>.from(
-        widget.cardsCustomizados ?? CardIngles.cardsIniciais,
-      );
-      _indiceAtual = 0;
-      _cardsRevisadosComSucesso = 0;
-      _cardsParaRepetir = 0;
-      _blocoFinalizado = false;
-    });
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void _processarAutoavaliacao(NivelAutoavaliacao nivel) {
-    final cardAtual = _filaCards[_indiceAtual];
-
-    setState(() {
-      if (nivel == NivelAutoavaliacao.rever) {
-        _cardsParaRepetir++;
-        // Reinsere o card no final da fila para fixação imediata no mesmo bloco
-        _filaCards.add(cardAtual);
-      } else {
-        _cardsRevisadosComSucesso++;
-      }
-
-      if (_indiceAtual + 1 < _filaCards.length) {
-        _indiceAtual++;
-      } else {
-        _blocoFinalizado = true;
-      }
-    });
+    _controller.processarAutoavaliacao(nivel);
   }
 
   @override
@@ -87,7 +66,7 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: _blocoFinalizado
+              child: _controller.isFinished
                   ? _construirTelaConclusao(context)
                   : _construirFluxoEstudo(context, textTheme),
             ),
@@ -98,8 +77,8 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
   }
 
   Widget _construirFluxoEstudo(BuildContext context, TextTheme textTheme) {
-    final progresso = (_indiceAtual + 1) / _filaCards.length;
-    final cardAtual = _filaCards[_indiceAtual];
+    final progresso = (_controller.currentIndex + 1) / _controller.totalCards;
+    final cardAtual = _controller.currentCard!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -116,7 +95,7 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
               ),
             ),
             Text(
-              'Card ${_indiceAtual + 1} de ${_filaCards.length}',
+              'Card ${_controller.currentIndex + 1} de ${_controller.totalCards}',
               style: textTheme.labelMedium?.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.bold,
@@ -142,7 +121,7 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
 
         // Componente interativo do Flashcard
         FlashcardWidget(
-          key: ValueKey(cardAtual.id + _indiceAtual.toString()),
+          key: ValueKey(cardAtual.id + _controller.currentIndex.toString()),
           card: cardAtual,
           onAvaliar: _processarAutoavaliacao,
         ),
@@ -217,12 +196,12 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
               children: [
                 _ItemResumo(
                   label: 'Dominadas',
-                  valor: '$_cardsRevisadosComSucesso',
+                  valor: '${_controller.cardsRevisadosComSucesso}',
                   cor: AppColors.success,
                 ),
                 _ItemResumo(
                   label: 'Revisadas',
-                  valor: '$_cardsParaRepetir',
+                  valor: '${_controller.cardsParaRepetir}',
                   cor: AppColors.primary,
                 ),
               ],
