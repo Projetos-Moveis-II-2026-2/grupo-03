@@ -38,6 +38,7 @@ class SrsController extends ChangeNotifier {
     return null;
   }
   
+  int get currentIndex => _currentIndex;
   bool get isFinished => _currentIndex >= _blockQuestions.length;
   int get totalQuestions => _blockQuestions.length;
   int get correctAnswers => _correctAnswers;

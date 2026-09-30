@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../controllers/srs_controller.dart';
+import '../repositories/questao_repository.dart';
 import '../models/questao_simulado.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
@@ -17,17 +19,24 @@ class TelaSimuladoIngles extends StatefulWidget {
 }
 
 class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
-  late final List<QuestaoSimulado> _listaQuestoes;
-  int _indiceAtual = 0;
+  late final SrsController _controller;
   int? _opcaoSelecionada;
   bool _jaRespondeu = false;
-  int _acertos = 0;
-  bool _simuladoConcluido = false;
 
   @override
   void initState() {
     super.initState();
-    _listaQuestoes = widget.questoes ?? QuestaoSimulado.simuladoInicial;
+    // Instanciamos o Repositório e Controlador da lógica SRS.
+    _controller = SrsController(QuestaoRepository());
+    _controller.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void _selecionarOpcao(int indice) {
@@ -36,31 +45,25 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     setState(() {
       _opcaoSelecionada = indice;
       _jaRespondeu = true;
-      if (indice == _listaQuestoes[_indiceAtual].indiceCorreto) {
-        _acertos++;
-      }
     });
   }
 
   void _avancarQuestao() {
+    if (_opcaoSelecionada != null) {
+      _controller.processAnswer(_opcaoSelecionada!);
+    }
+    
     setState(() {
-      if (_indiceAtual + 1 < _listaQuestoes.length) {
-        _indiceAtual++;
-        _opcaoSelecionada = null;
-        _jaRespondeu = false;
-      } else {
-        _simuladoConcluido = true;
-      }
+      _opcaoSelecionada = null;
+      _jaRespondeu = false;
     });
   }
 
   void _reiniciarSimulado() {
+    _controller.restartBlock();
     setState(() {
-      _indiceAtual = 0;
       _opcaoSelecionada = null;
       _jaRespondeu = false;
-      _acertos = 0;
-      _simuladoConcluido = false;
     });
   }
 
@@ -83,7 +86,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: _simuladoConcluido
+              child: _controller.isFinished
                   ? _construirTelaResultado(context, textTheme)
                   : _construirPergunta(context, textTheme),
             ),
@@ -94,8 +97,8 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   }
 
   Widget _construirPergunta(BuildContext context, TextTheme textTheme) {
-    final questao = _listaQuestoes[_indiceAtual];
-    final progresso = (_indiceAtual + 1) / _listaQuestoes.length;
+    final questao = _controller.currentQuestion!;
+    final progresso = (_controller.currentIndex + 1) / _controller.totalQuestions;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -112,7 +115,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
               ),
             ),
             Text(
-              'Questão ${_indiceAtual + 1} de ${_listaQuestoes.length}',
+              'Questão ${_controller.currentIndex + 1} de ${_controller.totalQuestions}',
               style: textTheme.labelMedium?.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.bold,
@@ -201,7 +204,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
           ),
           const SizedBox(height: 20),
           AppButton(
-            text: _indiceAtual + 1 < _listaQuestoes.length
+            text: _controller.currentIndex + 1 < _controller.totalQuestions
                 ? 'Próxima questão'
                 : 'Ver resultado',
             onPressed: _avancarQuestao,
@@ -269,7 +272,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   }
 
   Widget _construirTelaResultado(BuildContext context, TextTheme textTheme) {
-    final aproveitamento = (_acertos / _listaQuestoes.length) * 100;
+    final aproveitamento = _controller.successRate;
 
     return Container(
       padding: const EdgeInsets.all(28),
@@ -332,7 +335,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
                 Column(
                   children: [
                     Text(
-                      '$_acertos / ${_listaQuestoes.length}',
+                      '${_controller.correctAnswers} / ${_controller.totalQuestions}',
                       style: textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
