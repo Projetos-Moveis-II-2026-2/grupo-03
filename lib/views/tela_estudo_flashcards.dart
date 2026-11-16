@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../controllers/flashcard_controller.dart';
 import '../repositories/flashcard_repository.dart';
@@ -31,7 +32,16 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
   @override
   void initState() {
     super.initState();
-    _controller = FlashcardController(FlashcardRepository());
+    FlashcardRepository repo;
+    try {
+      repo = context.read<FlashcardRepository>();
+    } on ProviderNotFoundException {
+      repo = FlashcardRepository();
+    }
+    _controller = FlashcardController(
+      repo,
+      cardsCustomizados: widget.cardsCustomizados,
+    );
     _controller.addListener(() {
       if (mounted) setState(() {});
     });

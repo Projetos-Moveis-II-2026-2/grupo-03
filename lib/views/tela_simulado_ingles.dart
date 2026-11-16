@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../controllers/srs_controller.dart';
 import '../repositories/questao_repository.dart';
@@ -26,8 +27,16 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   @override
   void initState() {
     super.initState();
-    // Instanciamos o Repositório e Controlador da lógica SRS.
-    _controller = SrsController(QuestaoRepository());
+    QuestaoRepository repo;
+    try {
+      repo = context.read<QuestaoRepository>();
+    } on ProviderNotFoundException {
+      repo = QuestaoRepository();
+    }
+    _controller = SrsController(
+      repo,
+      questoesCustomizadas: widget.questoes,
+    );
     _controller.addListener(() {
       if (mounted) setState(() {});
     });
