@@ -67,4 +67,28 @@ class CardIngles {
       categoria: 'Neurociência & TDAH',
     ),
   ];
+
+  factory CardIngles.fromJson(Map<String, dynamic> json) {
+    return CardIngles(
+      id: json['id'] as String? ?? '',
+      termo: json['termo'] as String? ?? '',
+      fonetica: json['fonetica'] as String? ?? '',
+      traducao: json['traducao'] as String? ?? '',
+      exemploIngles: json['exemploIngles'] as String? ?? '',
+      traducaoExemplo: json['traducaoExemplo'] as String? ?? '',
+      categoria: json['categoria'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'termo': termo,
+      'fonetica': fonetica,
+      'traducao': traducao,
+      'exemploIngles': exemploIngles,
+      'traducaoExemplo': traducaoExemplo,
+      'categoria': categoria,
+    };
+  }
 }

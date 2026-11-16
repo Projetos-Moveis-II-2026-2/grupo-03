@@ -30,14 +30,14 @@ class SrsInterval {
   /// Data da próxima revisão calculada a partir de `DateTime.now()`.
   DateTime nextReview;
 
-  /// Cria um novo intervalo. Por padrão, a primeira revisão ocorre
-  /// no próximo dia.
+  /// Cria um novo intervalo. Por padrão, cartões novos aparecem
+  /// imediatamente disponíveis para o primeiro estudo.
   SrsInterval({
     this.repetition = 0,
     this.easeFactor = 2.5,
     this.intervalDays = 1,
     DateTime? nextReview,
-  }) : nextReview = nextReview ?? DateTime.now().add(const Duration(days: 1));
+  }) : nextReview = nextReview ?? DateTime.now();
 
   /// Atualiza o intervalo com base no resultado da última tentativa.
   ///
@@ -87,6 +87,10 @@ class SrsInterval {
         easeFactor: (map['easeFactor'] as num?)?.toDouble() ?? 2.5,
         intervalDays: map['intervalDays'] as int? ?? 1,
         nextReview: DateTime.parse(map['nextReview'] as String? ??
-            DateTime.now().add(const Duration(days: 1)).toIso8601String()),
+            DateTime.now().toIso8601String()),
       );
+
+  Map<String, dynamic> toJson() => toMap();
+
+  factory SrsInterval.fromJson(Map<String, dynamic> json) => SrsInterval.fromMap(json);
 }

@@ -78,4 +78,24 @@ class QuestaoSimulado {
       explicacao: '"Reward" significa recompensa ou prêmio pelo esforço realizado.',
     ),
   ];
+
+  factory QuestaoSimulado.fromJson(Map<String, dynamic> json) {
+    return QuestaoSimulado(
+      id: json['id'] as String? ?? '',
+      enunciado: json['enunciado'] as String? ?? '',
+      opcoes: List<String>.from(json['opcoes'] as List? ?? []),
+      indiceCorreto: json['indiceCorreto'] as int? ?? 0,
+      explicacao: json['explicacao'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'enunciado': enunciado,
+      'opcoes': opcoes,
+      'indiceCorreto': indiceCorreto,
+      'explicacao': explicacao,
+    };
+  }
 }

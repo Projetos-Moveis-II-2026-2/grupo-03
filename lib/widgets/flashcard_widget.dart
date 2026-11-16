@@ -2,14 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../models/card_ingles.dart';
+import '../models/nivel_autoavaliacao.dart';
 import '../theme/app_colors.dart';
 
-/// Níveis de autoavaliação disponíveis no verso do flashcard.
-enum NivelAutoavaliacao {
-  rever,
-  bom,
-  facil,
-}
+export '../models/nivel_autoavaliacao.dart';
 
 /// Componente visual interativo de Flashcard com efeito de virada 3D (flip)
 /// e botões de autoavaliação no verso, desenvolvido para foco e baixo ruído visual.
