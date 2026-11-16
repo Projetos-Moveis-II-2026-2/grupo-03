@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/card_ingles.dart';
+import '../models/nivel_autoavaliacao.dart';
 import '../repositories/flashcard_repository.dart';
-import '../widgets/flashcard_widget.dart';
 
 /// Controlador que gerencia a sessão de Flashcards
 /// com base no algoritmo SRS em blocos curtos.
 class FlashcardController extends ChangeNotifier {
   final FlashcardRepository _repository;
+  final List<CardIngles>? cardsCustomizados;
   
   // Limite de cartas por bloco (micro-learning para TDAH)
   static const int maxCardsPerBlock = 5;
@@ -18,12 +19,12 @@ class FlashcardController extends ChangeNotifier {
   int _cardsRevisadosComSucesso = 0;
   int _cardsParaRepetir = 0;
 
-  FlashcardController(this._repository) {
+  FlashcardController(this._repository, {this.cardsCustomizados}) {
     _initBlock();
   }
 
   void _initBlock() {
-    _filaCards = _repository.getDueCardsBlock(maxCardsPerBlock);
+    _filaCards = _repository.getDueCardsBlock(maxCardsPerBlock, cardsFiltro: cardsCustomizados);
     _currentIndex = 0;
     _cardsRevisadosComSucesso = 0;
     _cardsParaRepetir = 0;

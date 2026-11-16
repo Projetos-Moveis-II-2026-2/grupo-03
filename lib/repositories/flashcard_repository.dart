@@ -1,20 +1,48 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/card_ingles.dart';
 import '../models/srs_interval.dart';
 
 /// Repositório em memória para os Flashcards de Inglês e seus
 /// estados de repetição espaçada. Na Etapa 3 será substituído por Supabase.
 class FlashcardRepository {
+  static const String _prefsKey = 'srs_flashcards_intervals';
+
+  final SharedPreferences? _prefs;
+
   // Inicialize com todos os cartões disponíveis
   final List<CardIngles> _cards = List.from(CardIngles.cardsIniciais);
 
   // Mapeamento id -> SrsInterval para cada cartão.
   final Map<String, SrsInterval> _intervals = {};
 
-  FlashcardRepository() {
+  FlashcardRepository({SharedPreferences? prefs}) : _prefs = prefs {
     // Inicializa o intervalo padrão para cada cartão
     for (var card in _cards) {
       _intervals[card.id] = SrsInterval();
     }
+    _carregarDoPrefs();
+  }
+
+  void _carregarDoPrefs() {
+    if (_prefs == null) return;
+    final jsonStr = _prefs.getString(_prefsKey);
+    if (jsonStr != null && jsonStr.isNotEmpty) {
+      try {
+        final Map<String, dynamic> data = jsonDecode(jsonStr);
+        data.forEach((key, value) {
+          if (value is Map) {
+            _intervals[key] = SrsInterval.fromMap(Map<String, dynamic>.from(value));
+          }
+        });
+      } catch (_) {}
+    }
+  }
+
+  void _salvarNoPrefs() {
+    if (_prefs == null) return;
+    final jsonStr = jsonEncode(_intervals.map((k, v) => MapEntry(k, v.toMap())));
+    _prefs.setString(_prefsKey, jsonStr);
   }
 
   /// Retorna todos os flashcards.
@@ -27,27 +55,36 @@ class FlashcardRepository {
   /// Persiste (ou atualiza) o intervalo de um cartão.
   void saveInterval(String cardId, SrsInterval intervalo) {
     _intervals[cardId] = intervalo;
+    _salvarNoPrefs();
   }
 
   /// Busca um bloco de flashcards para a próxima sessão de revisão.
   /// Prioriza cartões cujo próximo review já passou e limita ao tamanho do bloco.
-  List<CardIngles> getDueCardsBlock(int limit) {
+  List<CardIngles> getDueCardsBlock(int limit, {List<CardIngles>? cardsFiltro}) {
     final now = DateTime.now();
     
-    final all = _cards.toList();
+    final List<CardIngles> sourceList;
+    if (cardsFiltro != null && cardsFiltro.isNotEmpty) {
+      for (final card in cardsFiltro) {
+        _intervals.putIfAbsent(card.id, () => SrsInterval());
+      }
+      sourceList = cardsFiltro.toList();
+    } else {
+      sourceList = _cards.toList();
+    }
     
-    all.sort((a, b) {
+    sourceList.sort((a, b) {
       final intA = getInterval(a.id);
       final intB = getInterval(b.id);
       
-      final isDueA = intA.nextReview.isBefore(now) ? 0 : 1;
-      final isDueB = intB.nextReview.isBefore(now) ? 0 : 1;
+      final isDueA = !intA.nextReview.isAfter(now) ? 0 : 1;
+      final isDueB = !intB.nextReview.isAfter(now) ? 0 : 1;
       
       if (isDueA != isDueB) return isDueA.compareTo(isDueB);
       
       return intA.nextReview.compareTo(intB.nextReview);
     });
     
-    return all.take(limit).toList();
+    return sourceList.take(limit).toList();
   }
 }

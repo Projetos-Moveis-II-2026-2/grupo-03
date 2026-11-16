@@ -6,6 +6,7 @@ import '../repositories/questao_repository.dart';
 /// com base no algoritmo SRS em blocos curtos.
 class SrsController extends ChangeNotifier {
   final QuestaoRepository _repository;
+  final List<QuestaoSimulado>? questoesCustomizadas;
   
   // Limite de questões por bloco (micro-learning para TDAH)
   static const int maxQuestionsPerBlock = 5;
@@ -17,13 +18,13 @@ class SrsController extends ChangeNotifier {
   int _correctAnswers = 0;
   int _wrongAnswers = 0;
 
-  SrsController(this._repository) {
+  SrsController(this._repository, {this.questoesCustomizadas}) {
     _initBlock();
   }
 
   /// Inicializa um novo bloco de estudos buscando as questões mais urgentes
   void _initBlock() {
-    _blockQuestions = _repository.getDueQuestionsBlock(maxQuestionsPerBlock);
+    _blockQuestions = _repository.getDueQuestionsBlock(maxQuestionsPerBlock, questoesFiltro: questoesCustomizadas);
     _currentIndex = 0;
     _correctAnswers = 0;
     _wrongAnswers = 0;
