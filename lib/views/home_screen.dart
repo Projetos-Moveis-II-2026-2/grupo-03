@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/sessao_usuario.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
 import 'tela_decks_ingles.dart';
@@ -12,6 +13,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sessao = SessaoUsuario.of(context, listen: true);
     // A tipografia e o fundo são herdados do AppTheme do aplicativo.
     final textTheme = Theme.of(context).textTheme;
 
@@ -32,7 +34,7 @@ class HomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Olá, estudante! 👋',
+                              'Olá, ${sessao.primeiroNome}! 👋',
                               style: textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),

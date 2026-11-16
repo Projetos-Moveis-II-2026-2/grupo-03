@@ -23,7 +23,19 @@ class _LoginScreenState extends State<LoginScreen> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    SessaoUsuario.instance.login(email: _emailController.text);
+    final autenticado = SessaoUsuario.of(context).login(
+      email: _emailController.text,
+      senha: _passwordController.text,
+    );
+    if (!autenticado) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('E-mail ou senha inválidos. Verifique seus dados ou cadastre-se.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
     Navigator.pushReplacement(
       context,
       MaterialPageRoute<void>(builder: (context) => const HomeScreen()),

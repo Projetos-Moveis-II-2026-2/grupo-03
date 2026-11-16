@@ -11,7 +11,7 @@ class TelaPerfil extends StatelessWidget {
   const TelaPerfil({super.key});
 
   void _abrirEdicao(BuildContext context) {
-    final sessao = SessaoUsuario.instance;
+    final sessao = SessaoUsuario.of(context);
     final formKey = GlobalKey<FormState>();
     final nome = TextEditingController(text: sessao.nome);
     final email = TextEditingController(text: sessao.email);
@@ -106,7 +106,7 @@ class TelaPerfil extends StatelessWidget {
           FilledButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              SessaoUsuario.instance.logout();
+              SessaoUsuario.of(context).logout();
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
@@ -136,9 +136,9 @@ class TelaPerfil extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return ListenableBuilder(
-      listenable: SessaoUsuario.instance,
+      listenable: SessaoUsuario.of(context),
       builder: (context, _) {
-        final sessao = SessaoUsuario.instance;
+        final sessao = SessaoUsuario.of(context);
         return Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppBar(
@@ -337,12 +337,13 @@ class TelaPerfil extends StatelessWidget {
         onTap: () {},
       ),
     ];
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
+    return Material(
+      color: AppColors.card,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        side: const BorderSide(color: AppColors.border),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           for (var i = 0; i < items.length; i++) ...[

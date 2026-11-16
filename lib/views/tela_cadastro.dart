@@ -36,9 +36,10 @@ class _TelaCadastroState extends State<TelaCadastro> {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
 
-    SessaoUsuario.instance.cadastrar(
+    SessaoUsuario.of(context).cadastrar(
       nome: _nameController.text,
       email: _emailController.text,
+      senha: _passwordController.text,
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
