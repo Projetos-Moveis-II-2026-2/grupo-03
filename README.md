@@ -17,20 +17,36 @@ Diferente de métodos tradicionais que geram paralisia de escolha, sobrecarga se
 
 ---
 
-## 👥 Equipe e Entregas por Etapa
+## 👥 Equipe e Planejamento de Atividades
 
-O projeto é desenvolvido em ciclos semanais por uma equipe de 4 integrantes organizados em duplas:
+A equipe é composta por 4 integrantes (**JP, Raquel, Emily e Maria**), com a seguinte divisão de responsabilidades para as entregas e ajustes técnicos do projeto:
 
-| Etapa | Escopo da Entrega | Status | Responsáveis (Dupla) |
+| Etapa / Frente | Escopo da Entrega | Status | Responsáveis |
 | :---: | :--- | :---: | :---: |
-| **Etapa 1** | **Estrutura Base, Autenticação e Design System:** Arquitetura móvel inicial, Design System de baixo estímulo, fluxo de login, cadastro e perfil de usuário. | Concluída com Ressalva Técnica (Persistência em disco pendente, postergada para o Supabase Auth na Etapa 3) | **Maria e Emily** |
-| **Etapa 2** | **Módulo Questões (Inglês para TDAH):** Lógica e interface de Flashcards e Quiz/Simulados em blocos curtos, e algoritmo de Repetição Espaçada (SRS). | **Em Desenvolvimento** (UI/UX do JP concluída; Algoritmo SRS da Raquel em andamento) | **JP e Raquel** |
-| **Etapa 3** | **Conexão com Banco Remoto (Supabase REST API):** Sincronização dinâmica de decks de vocabulário em inglês, histórico de revisões e tratamento assíncrono. | Aguardando Etapa 2 | **Maria e Emily** |
-| **Etapa 4** | **Gamificação Leve para TDAH, Testes e Entrega Final:** Reforço positivo aleatório, testes automatizados e build final para Android (APK). | Aguardando Etapa 3 | **JP e Raquel** |
+| **Etapa 1** | **Estrutura Base, Autenticação e Design System:** Arquitetura móvel inicial, Design System de baixo estímulo, fluxo de login, cadastro e perfil de usuário. | Concluída (Ajustes técnicos em andamento) | **Maria e Emily** |
+| **Etapa 2** | **Módulo Questões (Inglês para TDAH):** Interface de Flashcards e Quiz/Simulados em blocos curtos, e algoritmo de Repetição Espaçada (SRS). | Concluída (Unificada na branch `etapa-02`) | **JP e Raquel** |
+| **Ajustes Etapas 1 e 2** | **Unificação de Branches & Correções Arquiteturais:** Merge para a `main`, injeção de dependência com `Provider`, serialização JSON (`fromJson`/`toJson`), correção de filtros de tema/SRS e persistência local. | **Em Execução** | **JP** |
+| **Etapa 3** | **Conexão com Banco Remoto (Supabase REST API):** Backend e Auth no Supabase (**Emily**) + Repositórios assíncronos, sincronização do SRS e tratamento de erros de rede na UI (**Maria**). | Planejado | **Emily e Maria** |
+| **Etapa 4** | **Gamificação Leve, IA Adaptativa, Testes e Build Final (.aab):** Recompensas aleatórias, métricas reais na Home, recomendação adaptativa (IA) para pontos fracos e pacote `.aab` (**Raquel**) + Testes automatizados `flutter test` (**JP**). | Planejado | **Raquel e JP** |
 
-### Divisão de Papéis na Etapa Atual (Etapa 2):
-- **JP (UI/UX & Apresentação):** Telas de estudo em blocos curtos, seleção de temas/decks, componente visual de Flashcard (flip 3D, fonética brasileira e autoavaliação), interface de Quiz/Simulado e navegação geral — **Concluído**.
-- **Raquel (Lógica & Algoritmo):** Algoritmo central de Repetição Espaçada (SRS), modelagem das entidades de repetição, controller de fluxo de sessão e fila dinâmica — **Em andamento**.
+### Detalhamento das Atividades Atuais por Integrante:
+- **JP:**
+  - Unificar as branches `etapa-02` e `etapa-02-algoritmo-srs-tdah` e integrar à `main` via Pull Request.
+  - Implementar injeção de dependência global (`Provider`) para manter o estado dos repositórios e da sessão entre as telas.
+  - Adicionar `fromJson` e `toJson` nos modelos `CardIngles` e `QuestaoSimulado`.
+  - Corrigir o repasse de temas selecionados para `TelaEstudoFlashcards` e `TelaSimuladoIngles`, e ajustar a data inicial de revisão dos novos cartões no SRS.
+  - Implementar validação de credenciais no login e persistência local.
+  - **(Etapa 4):** Desenvolver a bateria de testes automatizados (`flutter test` — testes unitários do algoritmo SRS, models e componentes visuais).
+- **Emily (Etapa 3 - Backend & Auth):**
+  - Configurar projeto e tabelas no Supabase (`decks_ingles`, `cards_vocabulario`, `questoes_simulado`, `progresso_srs_usuario`) com carga inicial de dados.
+  - Integrar autenticação de usuários (Login/Cadastro/Recuperação) e expor os serviços/endpoints de consulta e gravação.
+- **Maria (Etapa 3 - Consumo REST & Resiliência de UI):**
+  - Refatorar `FlashcardRepository` e `QuestaoRepository` para buscar dados remotamente via API REST e sincronizar intervalos do SRS.
+  - Implementar indicadores de carregamento (*loading*), cache da sessão ativa e tratamento amigável de erros de conexão.
+- **Raquel (Etapa 4 - Gamificação, IA & Release):**
+  - Implementar gamificação leve para TDAH (sorteio de micro-recompensas ao fim dos blocos e atualização dinâmica de ofensivas/minutos na `HomeScreen`).
+  - Implementar módulo inteligente/IA para adaptar simulados focando nos vocabulários com maior taxa de erro do estudante.
+  - Gerar o pacote final Android App Bundle (`.aab`).
 
 ---
 

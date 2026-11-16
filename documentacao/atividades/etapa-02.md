@@ -5,7 +5,7 @@
 - **Etapa:** 2
 - **Título:** Módulo Questões: Ferramentas de Estudo Dinâmico de Inglês (Flashcards & Simulados) em Blocos Curtos e Algoritmo de Revisão Espaçada (SRS)
 - **Dupla Responsável:** **JP** e **Raquel**
-- **Status da Etapa:** **Em Desenvolvimento (Frente de UI/UX Concluída; Frente de Algoritmo em Andamento)**
+- **Status da Etapa:** **Concluída (Unificada na branch `etapa-02`) — Ajustes Arquiteturais em Execução por JP**
 
 ---
 
@@ -45,14 +45,23 @@
   - Barra de progresso minimalista, conclusão de bloco com métricas de estudo e redirecionamento para escolha de novo tema.
   - Conexão de todas as rotas a partir da tela principal (`lib/views/home_screen.dart`).
 
-### 👤 Raquel (Algoritmo SRS, Modelagem de Dados & Gerenciador do Fluxo) — Status: EM ANDAMENTO
-- **Modelagem das Entidades de Domínio:**
+### 👤 Raquel (Algoritmo SRS, Modelagem de Dados & Gerenciador do Fluxo) — Status: CONCLUÍDO
+- **Modelagem das Entidades de Domínio (`lib/models/srs_interval.dart`):**
   - Estruturação dos parâmetros de cálculo de facilidade e agendamento da repetição espaçada.
-- **Implementação do Algoritmo Central de Revisão Espaçada (SRS):**
+- **Implementação do Algoritmo Central de Revisão Espaçada (`lib/controllers/srs_controller.dart`):**
   - Regra de cálculo de intervalos de revisão com base no desempenho do estudante.
   - Fila dinâmica de reapresentação de cartões dentro e fora da sessão.
-- **Gerenciador de Estado do Estudo (Controller):**
-  - Desacoplamento da lógica de negócio das telas visuais, preparando a integração com o Supabase da Etapa 3.
+- **Gerenciador de Estado e Repositórios (`lib/controllers/flashcard_controller.dart`, `lib/repositories/`):**
+  - Criação dos repositórios de Flashcards e Questões e integração inicial com as telas.
+
+### 👤 JP (Frente Complementar: Unificação de Branches e Correções das Etapas 1 e 2) — Status: EM EXECUÇÃO
+- **Unificação e Integração Git:**
+  - Merge da branch `etapa-02-algoritmo-srs-tdah` na `etapa-02` e abertura de Pull Request para a `main`.
+- **Correções Arquiteturais e de Bugs (Revisão Etapa 1 e 2):**
+  - Injeção de dependência global (`Provider`) na raiz do aplicativo para preservar o estado dos repositórios e do SRS entre navegações.
+  - Implementação dos métodos `fromJson` e `toJson` em `CardIngles` e `QuestaoSimulado`.
+  - Correção do repasse dos baralhos temáticos selecionados para `TelaEstudoFlashcards` e `TelaSimuladoIngles`, e ajuste da data inicial de novos cartões no `SrsInterval`.
+  - Validação de credenciais de login e persistência local de sessão/progresso.
 
 ---
 
