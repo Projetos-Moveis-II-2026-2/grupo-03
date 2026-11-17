@@ -6,12 +6,18 @@ class QuestaoSimulado {
   final int indiceCorreto;
   final String explicacao;
 
+  /// Id do cartão de vocabulário (`CardIngles.id`) avaliado pela questão.
+  /// Liga o desempenho no simulado à palavra, permitindo a recomendação
+  /// adaptativa (priorizar as palavras com mais erros/"Rever").
+  final String? cardId;
+
   const QuestaoSimulado({
     required this.id,
     required this.enunciado,
     required this.opcoes,
     required this.indiceCorreto,
     required this.explicacao,
+    this.cardId,
   });
 
   /// Conjunto acadêmico inicial de questões em bloco curto (5 itens)
@@ -19,6 +25,7 @@ class QuestaoSimulado {
   static const List<QuestaoSimulado> simuladoInicial = [
     QuestaoSimulado(
       id: 'q_1',
+      cardId: 'card_4',
       enunciado: 'Qual a tradução mais adequada para o termo "Achievement"?',
       opcoes: [
         'Divisão de tarefas',
@@ -31,6 +38,7 @@ class QuestaoSimulado {
     ),
     QuestaoSimulado(
       id: 'q_2',
+      cardId: 'card_1',
       enunciado: 'Complete a frase com foco nos estudos: "Take a deep breath and keep your _____ on this task."',
       opcoes: [
         'focus',
@@ -43,6 +51,7 @@ class QuestaoSimulado {
     ),
     QuestaoSimulado(
       id: 'q_3',
+      cardId: 'card_2',
       enunciado: 'O que significa a expressão "Breakdown" em um contexto de produtividade?',
       opcoes: [
         'Desistir de uma meta difícil',
@@ -55,6 +64,7 @@ class QuestaoSimulado {
     ),
     QuestaoSimulado(
       id: 'q_4',
+      cardId: 'card_3',
       enunciado: 'Qual termo representa o conceito de "Consistência / Constância"?',
       opcoes: [
         'Schedule',
@@ -67,6 +77,7 @@ class QuestaoSimulado {
     ),
     QuestaoSimulado(
       id: 'q_5',
+      cardId: 'card_5',
       enunciado: 'Qual a tradução da palavra "Reward", essencial para a motivação no TDAH?',
       opcoes: [
         'Recompensa / Prêmio',
@@ -86,6 +97,7 @@ class QuestaoSimulado {
       opcoes: List<String>.from(json['opcoes'] as List? ?? []),
       indiceCorreto: json['indiceCorreto'] as int? ?? 0,
       explicacao: json['explicacao'] as String? ?? '',
+      cardId: (json['cardId'] ?? json['card_id']) as String?,
     );
   }
 
@@ -96,6 +108,7 @@ class QuestaoSimulado {
       'opcoes': opcoes,
       'indiceCorreto': indiceCorreto,
       'explicacao': explicacao,
+      if (cardId != null) 'cardId': cardId,
     };
   }
 }

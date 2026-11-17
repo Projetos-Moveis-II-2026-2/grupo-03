@@ -102,7 +102,7 @@ Métodos públicos:
 **Commit sugerido:** `feat: adiciona modelo e controller de progresso do estudante`
 
 > ✅ **Parte A implementada.** Regras adotadas: ofensiva com tolerância de 1 dia sem estudo e meta diária de 5 revisões. Testes em `test/progresso_controller_test.dart`.
-> Pendência: o simulado ainda não registra erros por palavra porque `QuestaoSimulado` não tem `cardId`. Isso será feito na Parte D.
+> ~~Pendência: o simulado ainda não registra erros por palavra porque `QuestaoSimulado` não tem `cardId`.~~ Resolvida na Parte D.
 
 ---
 
@@ -207,6 +207,18 @@ peso(questão) = 3 × errosPorCard[cardId]          // histórico de "Rever" e e
 Trata-se de um sistema de recomendação adaptativo (baseado em regras e pontuação), que usa o histórico individual de desempenho e o modelo SRS (SM-2) para personalizar o conteúdo. Esse recurso atende ao "requisito de recurso inteligente previsto na proposta" (`etapa-04.md`, §3.2). Uma IA generativa externa **não** é necessária.
 
 **Commit sugerido:** `feat: adiciona recomendacao adaptativa baseada nos erros do estudante`
+
+> ✅ **Parte D implementada.**
+> - `QuestaoSimulado` ganhou o campo opcional `cardId`, e `fromJson` aceita tanto `cardId` quanto `card_id`.
+> - `RecomendacaoService` (`lib/services/recomendacao_service.dart`) calcula o peso de fraqueza e monta o bloco com até 70% de pontos fracos.
+> - O `SrsController` recebe `progresso` e `flashcards` como parâmetros opcionais. Sem eles, mantém o comportamento original. Os erros do simulado agora são registrados na palavra correspondente.
+> - A tela do simulado mostra o selo "🎯 Bloco focado nas palavras que você mais precisa rever: …".
+> - Testes: `test/recomendacao_service_test.dart`.
+>
+> 📣 **Avisar a equipe:**
+> - **JP:** o model `QuestaoSimulado` ganhou `cardId` (opcional e retrocompatível). Nos testes de serialização, considerar esse campo.
+> - **Emily:** criar a coluna `card_id` (FK para `cards_vocabulario.id`) na tabela `questoes_simulado`. O `fromJson` já lê `card_id`.
+> - **Maria Luiza:** ao tornar o `QuestaoRepository` assíncrono, manter a ordem do SRS em `getDueQuestionsBlock`, porque a recomendação usa essa ordem como desempate.
 
 ---
 

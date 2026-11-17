@@ -26,6 +26,7 @@ class TelaSimuladoIngles extends StatefulWidget {
 class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   late final SrsController _controller;
   ProgressoController? _progresso;
+  FlashcardRepository? _flashcards;
 
   /// Mede o tempo efetivo do bloco para os "minutos estudados".
   final Stopwatch _cronometro = Stopwatch();
@@ -50,9 +51,16 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     } on ProviderNotFoundException {
       _progresso = null;
     }
+    try {
+      _flashcards = context.read<FlashcardRepository>();
+    } on ProviderNotFoundException {
+      _flashcards = null;
+    }
     _controller = SrsController(
       repo,
       questoesCustomizadas: widget.questoes,
+      progresso: _progresso,
+      flashcards: _flashcards,
     );
     _controller.addListener(() {
       _registrarBlocoSeConcluido();
@@ -71,16 +79,10 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
       acertos: _controller.correctAnswers,
       total: _controller.totalQuestions,
     );
-    int palavrasDominadas;
-    try {
-      palavrasDominadas = context.read<FlashcardRepository>().contarDominados();
-    } on ProviderNotFoundException {
-      palavrasDominadas = 0;
-    }
     _recompensa = RecompensaService.padrao.concederAoConcluirBloco(
       acertos: _controller.correctAnswers,
       total: _controller.totalQuestions,
-      palavrasDominadas: palavrasDominadas,
+      palavrasDominadas: _flashcards?.contarDominados() ?? 0,
       progresso: _progresso,
     );
   }
@@ -192,6 +194,13 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
         ),
+
+        // Selo da recomendação adaptativa (IA): deixa visível ao estudante
+        // que o bloco foi montado a partir das palavras que ele mais errou.
+        if (_controller.blocoAdaptativo) ...[
+          const SizedBox(height: 16),
+          _SeloBlocoAdaptativo(termos: _controller.termosEmFoco),
+        ],
 
         const SizedBox(height: 24),
 
@@ -460,6 +469,41 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
               side: const BorderSide(color: AppColors.border),
             ),
             child: const Text('Voltar ao início'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Selo discreto informando que o bloco prioriza os pontos fracos.
+class _SeloBlocoAdaptativo extends StatelessWidget {
+  final List<String> termos;
+
+  const _SeloBlocoAdaptativo({required this.termos});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final detalhe = termos.isEmpty ? '' : ': ${termos.join(', ')}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Text('🎯', style: TextStyle(fontSize: 18)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Bloco focado nas palavras que você mais precisa rever$detalhe',
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
