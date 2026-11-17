@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/progresso_controller.dart';
 import '../controllers/srs_controller.dart';
 import '../repositories/questao_repository.dart';
 import '../models/questao_simulado.dart';
@@ -21,6 +22,11 @@ class TelaSimuladoIngles extends StatefulWidget {
 
 class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   late final SrsController _controller;
+  ProgressoController? _progresso;
+
+  /// Mede o tempo efetivo do bloco para os "minutos estudados".
+  final Stopwatch _cronometro = Stopwatch();
+  bool _blocoRegistrado = false;
   int? _opcaoSelecionada;
   bool _jaRespondeu = false;
 
@@ -33,13 +39,32 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     } on ProviderNotFoundException {
       repo = QuestaoRepository();
     }
+    try {
+      _progresso = context.read<ProgressoController>();
+    } on ProviderNotFoundException {
+      _progresso = null;
+    }
     _controller = SrsController(
       repo,
       questoesCustomizadas: widget.questoes,
     );
     _controller.addListener(() {
+      _registrarBlocoSeConcluido();
       if (mounted) setState(() {});
     });
+    _cronometro.start();
+  }
+
+  /// Registra o bloco no progresso uma única vez, ao concluir.
+  void _registrarBlocoSeConcluido() {
+    if (_blocoRegistrado || !_controller.isFinished) return;
+    _blocoRegistrado = true;
+    _cronometro.stop();
+    _progresso?.registrarBlocoConcluido(
+      duracao: _cronometro.elapsed,
+      acertos: _controller.correctAnswers,
+      total: _controller.totalQuestions,
+    );
   }
 
   @override
@@ -69,6 +94,10 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   }
 
   void _reiniciarSimulado() {
+    _blocoRegistrado = false;
+    _cronometro
+      ..reset()
+      ..start();
     _controller.restartBlock();
     setState(() {
       _opcaoSelecionada = null;

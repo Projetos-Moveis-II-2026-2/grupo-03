@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/card_ingles.dart';
 import '../models/nivel_autoavaliacao.dart';
+import '../controllers/progresso_controller.dart';
 import '../repositories/flashcard_repository.dart';
 
 /// Controlador que gerencia a sessão de Flashcards
@@ -8,6 +9,10 @@ import '../repositories/flashcard_repository.dart';
 class FlashcardController extends ChangeNotifier {
   final FlashcardRepository _repository;
   final List<CardIngles>? cardsCustomizados;
+
+  /// Registra erros/acertos por palavra para a recomendação adaptativa.
+  /// Opcional para manter o controller testável de forma isolada.
+  final ProgressoController? progresso;
   
   // Limite de cartas por bloco (micro-learning para TDAH)
   static const int maxCardsPerBlock = 5;
@@ -19,7 +24,11 @@ class FlashcardController extends ChangeNotifier {
   int _cardsRevisadosComSucesso = 0;
   int _cardsParaRepetir = 0;
 
-  FlashcardController(this._repository, {this.cardsCustomizados}) {
+  FlashcardController(
+    this._repository, {
+    this.cardsCustomizados,
+    this.progresso,
+  }) {
     _initBlock();
   }
 
@@ -71,6 +80,13 @@ class FlashcardController extends ChangeNotifier {
     final interval = _repository.getInterval(current.id);
     interval.update(correct, isEasy: isEasy);
     _repository.saveInterval(current.id, interval);
+
+    // Histórico de pontos fracos ("Rever") por palavra
+    if (correct) {
+      progresso?.registrarAcerto(current.id);
+    } else {
+      progresso?.registrarErro(current.id);
+    }
     
     _currentIndex++;
     notifyListeners();
