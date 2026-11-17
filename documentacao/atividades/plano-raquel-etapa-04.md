@@ -140,6 +140,14 @@ class RecompensaService {
 
 **Commit sugerido:** `feat: implementa sorteio de micro-recompensas ao concluir blocos`
 
+> ✅ **Parte B implementada.**
+> - Os blocos recebem 8 expressões de incentivo; quando a taxa de acerto fica abaixo de 60%, recebem uma das 4 expressões acolhedoras.
+> - Cada expressão vem com tradução e uma nota cultural.
+> - 6 conquistas de marco são ganhas uma única vez e salvas no progresso: *First Step!*, *Flawless!*, *Never Give Up!*, *Streak Starter*, *Word Master!* e *Focus Champion*.
+> - Quando não há marco novo, há 25% de chance de uma conquista surpresa (*Brain Booster*, *Curious Mind* ou *Steady Learner*).
+> - A animação é discreta e respeita a opção "reduzir animações" do sistema.
+> - Testes: `test/recompensa_service_test.dart` e `test/recompensa_card_test.dart`.
+
 ---
 
 ## 4. Parte C — Dashboard real (R2 a R5)

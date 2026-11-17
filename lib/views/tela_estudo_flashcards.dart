@@ -5,9 +5,11 @@ import '../controllers/flashcard_controller.dart';
 import '../controllers/progresso_controller.dart';
 import '../repositories/flashcard_repository.dart';
 import '../models/card_ingles.dart';
+import '../services/recompensa_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
 import '../widgets/flashcard_widget.dart';
+import '../widgets/recompensa_card.dart';
 import 'home_screen.dart';
 import 'tela_decks_ingles.dart';
 
@@ -29,11 +31,15 @@ class TelaEstudoFlashcards extends StatefulWidget {
 
 class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
   late final FlashcardController _controller;
+  late final FlashcardRepository _repo;
   ProgressoController? _progresso;
 
   /// Mede o tempo efetivo do bloco para os "minutos estudados".
   final Stopwatch _cronometro = Stopwatch();
   bool _blocoRegistrado = false;
+
+  /// Micro-recompensa sorteada ao concluir o bloco.
+  ResultadoRecompensa? _recompensa;
 
   @override
   void initState() {
@@ -44,6 +50,7 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
     } on ProviderNotFoundException {
       repo = FlashcardRepository();
     }
+    _repo = repo;
     try {
       _progresso = context.read<ProgressoController>();
     } on ProviderNotFoundException {
@@ -67,10 +74,17 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
     _blocoRegistrado = true;
     _cronometro.stop();
     final acertos = _controller.cardsRevisadosComSucesso;
+    final total = acertos + _controller.cardsParaRepetir;
     _progresso?.registrarBlocoConcluido(
       duracao: _cronometro.elapsed,
       acertos: acertos,
-      total: acertos + _controller.cardsParaRepetir,
+      total: total,
+    );
+    _recompensa = RecompensaService.padrao.concederAoConcluirBloco(
+      acertos: acertos,
+      total: total,
+      palavrasDominadas: _repo.contarDominados(),
+      progresso: _progresso,
     );
   }
 
@@ -220,6 +234,10 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
             ),
           ),
           const SizedBox(height: 24),
+          if (_recompensa != null) ...[
+            RecompensaCard(resultado: _recompensa!),
+            const SizedBox(height: 24),
+          ],
 
           // Resumo estatístico do bloco
           Container(

@@ -3,10 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../controllers/progresso_controller.dart';
 import '../controllers/srs_controller.dart';
+import '../repositories/flashcard_repository.dart';
 import '../repositories/questao_repository.dart';
 import '../models/questao_simulado.dart';
+import '../services/recompensa_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
+import '../widgets/recompensa_card.dart';
 import 'home_screen.dart';
 
 /// Tela simples de Simulado / Quiz de Inglês em bloco curto (5 questões),
@@ -27,6 +30,9 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   /// Mede o tempo efetivo do bloco para os "minutos estudados".
   final Stopwatch _cronometro = Stopwatch();
   bool _blocoRegistrado = false;
+
+  /// Micro-recompensa sorteada ao concluir o bloco.
+  ResultadoRecompensa? _recompensa;
   int? _opcaoSelecionada;
   bool _jaRespondeu = false;
 
@@ -65,6 +71,18 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
       acertos: _controller.correctAnswers,
       total: _controller.totalQuestions,
     );
+    int palavrasDominadas;
+    try {
+      palavrasDominadas = context.read<FlashcardRepository>().contarDominados();
+    } on ProviderNotFoundException {
+      palavrasDominadas = 0;
+    }
+    _recompensa = RecompensaService.padrao.concederAoConcluirBloco(
+      acertos: _controller.correctAnswers,
+      total: _controller.totalQuestions,
+      palavrasDominadas: palavrasDominadas,
+      progresso: _progresso,
+    );
   }
 
   @override
@@ -95,6 +113,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
 
   void _reiniciarSimulado() {
     _blocoRegistrado = false;
+    _recompensa = null;
     _cronometro
       ..reset()
       ..start();
@@ -359,6 +378,10 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             ),
           ),
           const SizedBox(height: 24),
+          if (_recompensa != null) ...[
+            RecompensaCard(resultado: _recompensa!),
+            const SizedBox(height: 24),
+          ],
 
           // Painel de acertos
           Container(
