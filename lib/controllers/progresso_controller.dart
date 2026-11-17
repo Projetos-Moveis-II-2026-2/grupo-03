@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
 import '../models/progresso_estudo.dart';
 import '../repositories/progresso_repository.dart';
@@ -24,7 +25,22 @@ class ProgressoController extends ChangeNotifier {
   String? _usuarioId;
 
   ProgressoController(this._repository, {DateTime Function()? agora})
-      : _agora = agora ?? DateTime.now;
+    : _agora = agora ?? DateTime.now;
+
+  /// Instância vazia usada quando a tela é montada sem Provider (ex.: testes).
+  static final ProgressoController _semProvider = ProgressoController(
+    ProgressoRepositoryLocal(),
+  );
+
+  /// Obtém o controller do Provider, com fallback seguro (mesmo padrão
+  /// de `SessaoUsuario.of`).
+  static ProgressoController of(BuildContext context, {bool listen = false}) {
+    try {
+      return Provider.of<ProgressoController>(context, listen: listen);
+    } on ProviderNotFoundException {
+      return _semProvider;
+    }
+  }
 
   String? get usuarioId => _usuarioId;
 
@@ -97,14 +113,16 @@ class ProgressoController extends ChangeNotifier {
       ? 0
       : _progresso.acertosTotais / _progresso.respostasTotais * 100;
 
-  Map<String, int> get errosPorCard => Map.unmodifiable(_progresso.errosPorCard);
+  Map<String, int> get errosPorCard =>
+      Map.unmodifiable(_progresso.errosPorCard);
 
   int errosDoCard(String cardId) => _progresso.errosPorCard[cardId] ?? 0;
 
   List<String> get conquistas => List.unmodifiable(_progresso.conquistas);
 
   /// Cópia somente leitura do progresso (útil para serviços e testes).
-  ProgressoEstudo get progresso => ProgressoEstudo.fromJson(_progresso.toJson());
+  ProgressoEstudo get progresso =>
+      ProgressoEstudo.fromJson(_progresso.toJson());
 
   // ---------------------------------------------------------------------------
   // Registro de eventos

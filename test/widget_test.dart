@@ -59,10 +59,10 @@ void main() {
     expect(find.text('emily@email.com'), findsOneWidget);
 
     // Gamificação / Estatísticas Rápidas
-    expect(find.text('4 dias'), findsOneWidget);
-    expect(find.text('320 XP'), findsOneWidget);
-    expect(find.text('Nível'), findsOneWidget);
-    expect(find.text('Estudante'), findsOneWidget);
+    // Estatísticas reais (usuário ainda sem estudo registrado)
+    expect(find.text('0 dias'), findsOneWidget);
+    expect(find.text('palavras dominadas'), findsOneWidget);
+    expect(find.text('0 min'), findsOneWidget);
 
     // Itens de Menu
     expect(find.text('Editar perfil'), findsOneWidget);

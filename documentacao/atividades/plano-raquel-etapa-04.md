@@ -162,6 +162,8 @@ Observação: como a `HomeScreen` é um `StatelessWidget`, o `watch` faz a tela 
 
 **Commit sugerido:** `feat: conecta HomeScreen e Perfil as metricas reais de estudo`
 
+> ✅ **Parte C implementada.** Na Home, a ofensiva, a meta diária, os flashcards pendentes e o bloco "Seu progresso" (minutos, palavras dominadas e % de acertos) agora usam dados reais. No Perfil, o bloco de estatísticas mostra ofensiva, palavras dominadas e minutos. Palavra dominada = `repetition >= 3` no SRS (`FlashcardRepository.repeticoesParaDominar`). O `test/widget_test.dart` foi ajustado para os novos textos (antes: "4 dias" / "320 XP").
+
 ---
 
 ## 5. Parte D — Adaptação inteligente / IA (R6)
