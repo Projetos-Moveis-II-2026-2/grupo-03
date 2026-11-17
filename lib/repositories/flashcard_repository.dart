@@ -8,6 +8,10 @@ import '../models/srs_interval.dart';
 class FlashcardRepository {
   static const String _prefsKey = 'srs_flashcards_intervals';
 
+  /// Acertos consecutivos no SRS para considerar uma palavra "dominada".
+  /// Após 3 acertos seguidos o intervalo já passa de 1 semana (SM-2).
+  static const int repeticoesParaDominar = 3;
+
   final SharedPreferences? _prefs;
 
   // Inicialize com todos os cartões disponíveis
@@ -57,6 +61,17 @@ class FlashcardRepository {
     _intervals[cardId] = intervalo;
     _salvarNoPrefs();
   }
+
+  /// Quantidade de cartões com revisão vencida (disponíveis agora).
+  int contarPendentes() {
+    final now = DateTime.now();
+    return _intervals.values.where((i) => !i.nextReview.isAfter(now)).length;
+  }
+
+  /// Quantidade de palavras dominadas pelo estudante.
+  int contarDominados() => _intervals.values
+      .where((i) => i.repetition >= repeticoesParaDominar)
+      .length;
 
   /// Busca um bloco de flashcards para a próxima sessão de revisão.
   /// Prioriza cartões cujo próximo review já passou e limita ao tamanho do bloco.

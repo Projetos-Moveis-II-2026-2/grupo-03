@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/progresso_controller.dart';
 import '../controllers/srs_controller.dart';
+import '../repositories/flashcard_repository.dart';
 import '../repositories/questao_repository.dart';
 import '../models/questao_simulado.dart';
+import '../services/recompensa_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
+import '../widgets/recompensa_card.dart';
 import 'home_screen.dart';
 
 /// Tela simples de Simulado / Quiz de Inglês em bloco curto (5 questões),
@@ -21,6 +25,15 @@ class TelaSimuladoIngles extends StatefulWidget {
 
 class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   late final SrsController _controller;
+  ProgressoController? _progresso;
+  FlashcardRepository? _flashcards;
+
+  /// Mede o tempo efetivo do bloco para os "minutos estudados".
+  final Stopwatch _cronometro = Stopwatch();
+  bool _blocoRegistrado = false;
+
+  /// Micro-recompensa sorteada ao concluir o bloco.
+  ResultadoRecompensa? _recompensa;
   int? _opcaoSelecionada;
   bool _jaRespondeu = false;
 
@@ -33,13 +46,45 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     } on ProviderNotFoundException {
       repo = QuestaoRepository();
     }
+    try {
+      _progresso = context.read<ProgressoController>();
+    } on ProviderNotFoundException {
+      _progresso = null;
+    }
+    try {
+      _flashcards = context.read<FlashcardRepository>();
+    } on ProviderNotFoundException {
+      _flashcards = null;
+    }
     _controller = SrsController(
       repo,
       questoesCustomizadas: widget.questoes,
+      progresso: _progresso,
+      flashcards: _flashcards,
     );
     _controller.addListener(() {
+      _registrarBlocoSeConcluido();
       if (mounted) setState(() {});
     });
+    _cronometro.start();
+  }
+
+  /// Registra o bloco no progresso uma única vez, ao concluir.
+  void _registrarBlocoSeConcluido() {
+    if (_blocoRegistrado || !_controller.isFinished) return;
+    _blocoRegistrado = true;
+    _cronometro.stop();
+    _progresso?.registrarBlocoConcluido(
+      duracao: _cronometro.elapsed,
+      acertos: _controller.correctAnswers,
+      total: _controller.totalQuestions,
+    );
+    _recompensa = RecompensaService.padrao.concederAoConcluirBloco(
+      acertos: _controller.correctAnswers,
+      total: _controller.totalQuestions,
+      palavrasDominadas: _flashcards?.contarDominados() ?? 0,
+      progresso: _progresso,
+    );
   }
 
   @override
@@ -69,6 +114,11 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   }
 
   void _reiniciarSimulado() {
+    _blocoRegistrado = false;
+    _recompensa = null;
+    _cronometro
+      ..reset()
+      ..start();
     _controller.restartBlock();
     setState(() {
       _opcaoSelecionada = null;
@@ -144,6 +194,13 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
         ),
+
+        // Selo da recomendação adaptativa (IA): deixa visível ao estudante
+        // que o bloco foi montado a partir das palavras que ele mais errou.
+        if (_controller.blocoAdaptativo) ...[
+          const SizedBox(height: 16),
+          _SeloBlocoAdaptativo(termos: _controller.termosEmFoco),
+        ],
 
         const SizedBox(height: 24),
 
@@ -330,6 +387,10 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             ),
           ),
           const SizedBox(height: 24),
+          if (_recompensa != null) ...[
+            RecompensaCard(resultado: _recompensa!),
+            const SizedBox(height: 24),
+          ],
 
           // Painel de acertos
           Container(
@@ -408,6 +469,41 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
               side: const BorderSide(color: AppColors.border),
             ),
             child: const Text('Voltar ao início'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Selo discreto informando que o bloco prioriza os pontos fracos.
+class _SeloBlocoAdaptativo extends StatelessWidget {
+  final List<String> termos;
+
+  const _SeloBlocoAdaptativo({required this.termos});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final detalhe = termos.isEmpty ? '' : ': ${termos.join(', ')}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Text('🎯', style: TextStyle(fontSize: 18)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Bloco focado nas palavras que você mais precisa rever$detalhe',
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

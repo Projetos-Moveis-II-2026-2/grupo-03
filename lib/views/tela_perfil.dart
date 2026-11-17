@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../controllers/progresso_controller.dart';
 import '../models/sessao_usuario.dart';
+import '../repositories/flashcard_repository.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
@@ -216,7 +219,7 @@ class TelaPerfil extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      _estatisticas(textTheme),
+                      _estatisticas(context, textTheme),
                       const SizedBox(height: 24),
                       _menu(context),
                       const SizedBox(height: 28),
@@ -274,25 +277,50 @@ class TelaPerfil extends StatelessWidget {
     );
   }
 
-  Widget _estatisticas(TextTheme textTheme) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-    decoration: BoxDecoration(
-      color: AppColors.card,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: AppColors.border),
-    ),
-    child: IntrinsicHeight(
-      child: Row(
-        children: [
-          _stat('🔥', '4 dias', 'dias seguidos', textTheme),
-          const VerticalDivider(color: AppColors.border),
-          _stat('⭐', '320 XP', 'experiência', textTheme),
-          const VerticalDivider(color: AppColors.border),
-          _stat('👏', 'Nível', 'Estudante', textTheme),
-        ],
+  Widget _estatisticas(BuildContext context, TextTheme textTheme) {
+    final progresso = ProgressoController.of(context, listen: true);
+    FlashcardRepository repo;
+    try {
+      repo = context.read<FlashcardRepository>();
+    } on ProviderNotFoundException {
+      repo = FlashcardRepository();
+    }
+    final dominadas = repo.contarDominados();
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
       ),
-    ),
-  );
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            _stat(
+              '🔥',
+              formatarDias(progresso.ofensiva),
+              'seguidos',
+              textTheme,
+            ),
+            const VerticalDivider(color: AppColors.border),
+            _stat(
+              '🧠',
+              '$dominadas',
+              dominadas == 1 ? 'palavra dominada' : 'palavras dominadas',
+              textTheme,
+            ),
+            const VerticalDivider(color: AppColors.border),
+            _stat(
+              '⏱️',
+              '${progresso.minutosEstudados} min',
+              'estudados',
+              textTheme,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _stat(
     String emoji,
