@@ -4,8 +4,9 @@ import '../models/sessao_usuario.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
-import 'home_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'tela_cadastro.dart';
+import 'recuperacao_senha.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,30 +21,38 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+  bool _enviando = false;
+  Future<void> _submit() async {
+    if (_enviando || !_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    final autenticado = SessaoUsuario.of(context).login(
-      email: _emailController.text,
-      senha: _passwordController.text,
-    );
-    if (!autenticado) {
+    setState(() => _enviando = true);
+    try {
+      await SessaoUsuario.of(
+        context,
+      ).login(email: _emailController.text, senha: _passwordController.text);
+    } catch (erro) {
+      if (!mounted) return;
+      final mensagem = switch (erro) {
+        AuthException(code: 'email_not_confirmed') =>
+          'Confirme seu e-mail antes de entrar.',
+        AuthException(code: 'invalid_credentials') =>
+          'E-mail ou senha incorretos.',
+        _ =>
+          'Não foi possível entrar. Verifique sua conexão e tente novamente.',
+      };
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('E-mail ou senha inválidos. Verifique seus dados ou cadastre-se.'),
-          backgroundColor: AppColors.error,
-        ),
+        SnackBar(content: Text(mensagem), backgroundColor: AppColors.error),
       );
-      return;
+    } finally {
+      if (mounted) setState(() => _enviando = false);
     }
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute<void>(builder: (context) => const HomeScreen()),
-    );
   }
 
   void _forgotPassword() {
-    // Adicionar a navegação para recuperação de senha quando estiver disponível.
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const RecuperacaoSenha()),
+    );
   }
 
   void _register() {
@@ -167,7 +176,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        AppButton(text: 'Entrar', onPressed: _submit),
+                        AppButton(
+                          text: _enviando ? 'Entrando...' : 'Entrar',
+                          onPressed: _enviando ? null : _submit,
+                        ),
                       ],
                     ),
                   ),
