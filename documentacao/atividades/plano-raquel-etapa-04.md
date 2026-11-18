@@ -228,6 +228,31 @@ Trata-se de um sistema de recomendação adaptativo (baseado em regras e pontua�
 > - O progresso passou a ser salvo pelo UUID do Supabase Auth (`SessaoUsuario.id`) em vez do e-mail. Assim, trocar o e-mail no Perfil não zera a ofensiva nem os minutos.
 > - Testes: `test/integracao_supabase_progresso_test.dart`.
 
+## 5.5 Parte D2 — Geração automática de conteúdo (APIs públicas)
+
+> ✅ **Implementada (18/11/2026).** Decisão do grupo: opção A, com o Datamuse como núcleo e sem chave de API.
+
+**Fluxo** (`lib/services/gerador_conteudo_service.dart` + `lib/services/vocabulario_api.dart`):
+1. **Datamuse** (`ml` = sentido parecido + `rel_trg` = associadas ao tema) sugere as palavras.
+2. Filtro para iniciantes: palavra única com 3 a 14 letras, frequência entre 2 e 120 ocorrências por milhão de palavras, sem variações do próprio tema, sem formas em -ing e sem plural duplicado.
+3. **Free Dictionary** fornece a fonética (IPA) e a frase de exemplo. Palavras sem exemplo são descartadas.
+4. **MyMemory** traduz a palavra e o exemplo para pt-BR.
+5. O app monta uma questão por palavra, alternando 3 formatos: completar a frase, escolher a tradução e escolher a palavra em inglês. As alternativas erradas vêm das outras palavras do deck. Palavras com a mesma tradução não entram como alternativa umas das outras.
+
+**Integração:**
+- Temas → botão "Gerar deck automático" (`lib/views/tela_gerar_deck.dart`) → 6 temas sugeridos ou tema livre em inglês.
+- O deck gerado é salvo no aparelho (`adicionarGerados` / `adicionarGeradas` nos repositórios) e aparece em "Seus decks gerados", na revisão geral e no simulado.
+- Cada questão tem `cardId`, então entra na recomendação adaptativa.
+
+**Limitações conhecidas:**
+- O MyMemory às vezes erra traduções isoladas (ex.: *edible* → "Subprodutos"). Por isso a lista aparece para o estudante antes de estudar.
+- A fonética vem em IPA, não no estilo brasileiro dos cartões fixos.
+- A cota anônima do MyMemory é limitada (~5.000 caracteres/dia, o suficiente para dezenas de decks).
+- Exige internet só no momento de gerar. Depois, o deck funciona offline.
+- ⚠️ No `.aab`, depende da permissão `INTERNET` no `AndroidManifest.xml` principal (Parte E).
+
+Testes: `test/gerador_conteudo_test.dart` (filtro, questões, deck, parsing HTTP, persistência e tela), todos sem rede.
+
 ## 6. Parte E — Qualidade e Build Final (R7, R8)
 
 ### 6.1 `flutter analyze`

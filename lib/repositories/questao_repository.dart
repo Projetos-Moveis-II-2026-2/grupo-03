@@ -24,6 +24,11 @@ class QuestaoRepository {
   // Mapeamento id -> SrsInterval para cada questão.
   final Map<String, SrsInterval> _intervals = {};
 
+  /// Questões geradas automaticamente a partir dos decks gerados.
+  /// Separadas do conteúdo da API e persistidas no aparelho.
+  static const String _prefsGeradasKey = 'focodeck_questoes_geradas';
+  final List<QuestaoSimulado> _geradas = [];
+
   QuestaoRepository({SharedPreferences? prefs, ConteudoApi? api})
     : _prefs = prefs,
       _api = api ?? ConteudoApi() {
@@ -32,6 +37,39 @@ class QuestaoRepository {
       _intervals[q.id] = SrsInterval();
     }
     _carregarDoPrefs();
+    _carregarGeradas();
+  }
+
+  void _carregarGeradas() {
+    final raw = _prefs?.getString(_prefsGeradasKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final lista = jsonDecode(raw);
+      if (lista is! List) return;
+      for (final item in lista.whereType<Map>()) {
+        final questao = QuestaoSimulado.fromJson(
+          Map<String, dynamic>.from(item),
+        );
+        if (questao.id.isEmpty) continue;
+        _geradas.add(questao);
+        _intervals.putIfAbsent(questao.id, SrsInterval.new);
+      }
+    } catch (_) {}
+  }
+
+  /// Adiciona (ou substitui, pelo id) questões geradas automaticamente.
+  void adicionarGeradas(List<QuestaoSimulado> novas) {
+    final ids = novas.map((q) => q.id).toSet();
+    _geradas
+      ..removeWhere((q) => ids.contains(q.id))
+      ..addAll(novas);
+    for (final questao in novas) {
+      _intervals.putIfAbsent(questao.id, SrsInterval.new);
+    }
+    _prefs?.setString(
+      _prefsGeradasKey,
+      jsonEncode(_geradas.map((q) => q.toJson()).toList()),
+    );
   }
 
   bool get hasCachedQuestions => _carregado && _questoes.isNotEmpty;
@@ -89,8 +127,14 @@ class QuestaoRepository {
     _prefs.setString(_prefsKey, jsonStr);
   }
 
-  /// Retorna todas as questões.
-  List<QuestaoSimulado> getAll() => List.unmodifiable(_questoes);
+  /// Retorna todas as questões (conteúdo da API + geradas).
+  List<QuestaoSimulado> getAll() {
+    final ids = _questoes.map((q) => q.id).toSet();
+    return List.unmodifiable([
+      ..._questoes,
+      ..._geradas.where((q) => !ids.contains(q.id)),
+    ]);
+  }
 
   /// Obtém o intervalo SRS associado a uma questão.
   SrsInterval getInterval(String questaoId) =>
@@ -117,7 +161,7 @@ class QuestaoRepository {
       }
       sourceList = questoesFiltro.toList();
     } else {
-      sourceList = _questoes.toList();
+      sourceList = getAll().toList();
     }
 
     // Ordena priorizando quem já passou do prazo, e depois pelo tempo do proximo review

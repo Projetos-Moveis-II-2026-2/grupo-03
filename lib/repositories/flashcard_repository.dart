@@ -26,6 +26,12 @@ class FlashcardRepository {
   // Mapeamento id -> SrsInterval para cada cartão.
   final Map<String, SrsInterval> _intervals = {};
 
+  /// Cartões gerados automaticamente (Datamuse + dicionário + tradução).
+  /// Ficam separados do conteúdo da API para não serem apagados quando
+  /// `carregar()` substitui a lista remota, e persistem no aparelho.
+  static const String _prefsGeradosKey = 'focodeck_cards_gerados';
+  final List<CardIngles> _gerados = [];
+
   FlashcardRepository({SharedPreferences? prefs, ConteudoApi? api})
     : _prefs = prefs,
       _api = api ?? ConteudoApi() {
@@ -34,6 +40,40 @@ class FlashcardRepository {
       _intervals[card.id] = SrsInterval();
     }
     _carregarDoPrefs();
+    _carregarGerados();
+  }
+
+  void _carregarGerados() {
+    final raw = _prefs?.getString(_prefsGeradosKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final lista = jsonDecode(raw);
+      if (lista is! List) return;
+      for (final item in lista.whereType<Map>()) {
+        final card = CardIngles.fromJson(Map<String, dynamic>.from(item));
+        if (card.id.isEmpty) continue;
+        _gerados.add(card);
+        _intervals.putIfAbsent(card.id, SrsInterval.new);
+      }
+    } catch (_) {}
+  }
+
+  /// Cartões gerados automaticamente, na ordem em que foram criados.
+  List<CardIngles> get cardsGerados => List.unmodifiable(_gerados);
+
+  /// Adiciona (ou substitui, pelo id) cartões gerados automaticamente.
+  void adicionarGerados(List<CardIngles> novos) {
+    final ids = novos.map((c) => c.id).toSet();
+    _gerados
+      ..removeWhere((c) => ids.contains(c.id))
+      ..addAll(novos);
+    for (final card in novos) {
+      _intervals.putIfAbsent(card.id, SrsInterval.new);
+    }
+    _prefs?.setString(
+      _prefsGeradosKey,
+      jsonEncode(_gerados.map((c) => c.toJson()).toList()),
+    );
   }
 
   bool get hasCachedCards => _carregado && _cards.isNotEmpty;
@@ -92,8 +132,14 @@ class FlashcardRepository {
     _prefs.setString(_prefsKey, jsonStr);
   }
 
-  /// Retorna todos os flashcards.
-  List<CardIngles> getAll() => List.unmodifiable(_cards);
+  /// Retorna todos os flashcards (conteúdo da API + gerados).
+  List<CardIngles> getAll() {
+    final ids = _cards.map((c) => c.id).toSet();
+    return List.unmodifiable([
+      ..._cards,
+      ..._gerados.where((c) => !ids.contains(c.id)),
+    ]);
+  }
 
   /// Obtém o intervalo SRS associado a um cartão.
   SrsInterval getInterval(String cardId) => _intervals[cardId] ?? SrsInterval();
@@ -110,13 +156,13 @@ class FlashcardRepository {
   /// antigos de cartões que não vieram da API não entram na contagem.
   int contarPendentes() {
     final now = DateTime.now();
-    return _cards
+    return getAll()
         .where((c) => !getInterval(c.id).nextReview.isAfter(now))
         .length;
   }
 
   /// Quantidade de palavras dominadas pelo estudante (apenas do conteúdo atual).
-  int contarDominados() => _cards
+  int contarDominados() => getAll()
       .where((c) => getInterval(c.id).repetition >= repeticoesParaDominar)
       .length;
 
@@ -135,7 +181,7 @@ class FlashcardRepository {
       }
       sourceList = cardsFiltro.toList();
     } else {
-      sourceList = _cards.toList();
+      sourceList = getAll().toList();
     }
 
     sourceList.sort((a, b) {
