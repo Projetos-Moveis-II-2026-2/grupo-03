@@ -1,44 +1,72 @@
-import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Gerenciador de sessão do usuário atual no FocoDeck.
 ///
 /// Mantém os dados da conta conectada (nome e e-mail) em memória
 /// e notifica os ouvintes (HomeScreen, TelaPerfil, etc.) em caso de alteração.
+enum EtapaRecuperacao { solicitar, redefinir, invalida }
+
 class SessaoUsuario extends ChangeNotifier {
   SessaoUsuario._();
 
   static final SessaoUsuario instance = SessaoUsuario._();
 
-  static const String _prefsUsuariosKey = 'focodeck_usuarios';
-  static const String _prefsSessaoAtivaKey = 'focodeck_sessao_ativa';
+  Session? _sessao;
+  EtapaRecuperacao? _recuperacao;
+  EtapaRecuperacao? get recuperacao => _recuperacao;
+  String? _idRecuperacao;
 
-  SharedPreferences? _prefs;
+  Future<void> solicitarRecuperacao(String email) async {
+    final destino = kIsWeb
+        ? Uri.base.resolve('?fluxo=recuperacao').toString()
+        : null;
+    await _auth.resetPasswordForEmail(email.trim(), redirectTo: destino);
+  }
 
-  // Banco de usuários cadastrados em memória
-  final Map<String, Map<String, String>> _usuariosCadastrados = {
-    'emily@email.com': {
-      'nome': 'Emily Vitória',
-      'senha': '123456',
-    },
-  };
+  Future<void> abrirRecuperacao(Uri retorno) async {
+    try {
+      final resposta = await _auth.getSessionFromUrl(retorno);
+      if (!['passwordRecovery', 'recovery'].contains(resposta.redirectType)) {
+        throw const AuthException('Link inválido');
+      }
+      _idRecuperacao = resposta.session.user.id;
+      _recuperacao = EtapaRecuperacao.redefinir;
+    } catch (_) {
+      _recuperacao = EtapaRecuperacao.invalida;
+    }
+    _sincronizar();
+  }
 
-  String _nome = 'Emily Vitória';
-  String _email = 'emily@email.com';
-  bool _estaLogado = false;
-  bool _sessaoRestaurada = false;
+  Future<void> redefinirSenha(String senha) async {
+    if (_idRecuperacao == null || _auth.currentUser?.id != _idRecuperacao) {
+      throw const AuthException('Sessão de recuperação inválida');
+    }
+    await _auth.updateUser(UserAttributes(password: senha));
+  }
 
-  String get nome => _nome;
-  String get email => _email;
-  bool get estaLogado => _estaLogado;
-  bool get sessaoRestaurada => _sessaoRestaurada;
+  void concluirRecuperacao() {
+    _idRecuperacao = null;
+    _recuperacao = null;
+    notifyListeners();
+  }
+
+  StreamSubscription<AuthState>? _eventos;
+  GoTrueClient get _auth => Supabase.instance.client.auth;
+  String? get id => _sessao?.user.id;
+  String get email => _sessao?.user.email ?? '';
+  String get nome =>
+      _sessao?.user.userMetadata?['nome'] as String? ?? 'Estudante';
+  bool get estaLogado => _sessao != null;
 
   /// Retorna o primeiro nome para saudações personalizadas (ex: "Olá, Emily! 👋")
   String get primeiroNome {
-    final partes = _nome.trim().split(RegExp(r'\s+'));
+    final partes = nome.trim().split(RegExp(r'\s+'));
     return partes.isNotEmpty && partes.first.isNotEmpty
         ? partes.first
         : 'Estudante';
@@ -46,7 +74,7 @@ class SessaoUsuario extends ChangeNotifier {
 
   /// Retorna as iniciais do nome do usuário (ex: "EV" para Emily Vitória)
   String get iniciais {
-    final partes = _nome
+    final partes = nome
         .trim()
         .split(RegExp(r'\s+'))
         .where((p) => p.isNotEmpty)
@@ -67,125 +95,73 @@ class SessaoUsuario extends ChangeNotifier {
   }
 
   Future<void> carregar(SharedPreferences prefs) async {
-    _prefs = prefs;
-
-    final rawUsuarios = _prefs?.getString(_prefsUsuariosKey);
-    if (rawUsuarios != null && rawUsuarios.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(rawUsuarios);
-        if (decoded is Map<String, dynamic> && decoded.isNotEmpty) {
-          _usuariosCadastrados.clear();
-          for (final entry in decoded.entries) {
-            if (entry.value is Map) {
-              final dados = (entry.value as Map).map(
-                (k, v) => MapEntry(k.toString(), v.toString()),
-              );
-              _usuariosCadastrados[entry.key] = dados;
-            }
-          }
-        }
-      } catch (_) {
-        // Mantém os usuários padrão em memória se o JSON for inválido
-      }
-    }
-
-    if (_usuariosCadastrados.isEmpty) {
-      _usuariosCadastrados['emily@email.com'] = {
-        'nome': 'Emily Vitória',
-        'senha': '123456',
-      };
-    }
-
-    final emailAtivo =
-        _prefs?.getString(_prefsSessaoAtivaKey)?.trim().toLowerCase();
-    if (emailAtivo != null && _usuariosCadastrados.containsKey(emailAtivo)) {
-      _email = emailAtivo;
-      _nome = _usuariosCadastrados[emailAtivo]!['nome']!;
-      _estaLogado = true;
-      _sessaoRestaurada = true;
-      notifyListeners();
-    }
+    await prefs.remove('focodeck_usuarios');
+    await prefs.remove('focodeck_sessao_ativa');
+    await _eventos?.cancel();
+    _sincronizar();
+    _eventos = _auth.onAuthStateChange.listen(
+      (_) => _sincronizar(),
+      onError: (Object erro) => _sincronizar(),
+    );
   }
 
-  void _persistir() {
-    final prefs = _prefs;
-    if (prefs == null) return;
-
-    prefs.setString(_prefsUsuariosKey, jsonEncode(_usuariosCadastrados));
-    if (_estaLogado) {
-      prefs.setString(_prefsSessaoAtivaKey, _email.trim().toLowerCase());
-    } else {
-      prefs.remove(_prefsSessaoAtivaKey);
+  void _sincronizar() {
+    _sessao = _auth.currentSession;
+    if (_recuperacao == EtapaRecuperacao.redefinir && id != _idRecuperacao) {
+      _recuperacao = EtapaRecuperacao.invalida;
+      _idRecuperacao = null;
     }
-  }
-
-  /// Realiza login do usuário com base no e-mail informado
-  bool login({required String email, String? senha}) {
-    final emailFormatado = email.trim().toLowerCase();
-    if (!_usuariosCadastrados.containsKey(emailFormatado)) {
-      return false;
-    }
-
-    if (senha != null) {
-      final senhaArmazenada =
-          _usuariosCadastrados[emailFormatado]!['senha'] ?? '';
-      if (senhaArmazenada.isNotEmpty && senhaArmazenada != senha) {
-        return false;
-      }
-    }
-
-    _email = emailFormatado;
-    _nome = _usuariosCadastrados[emailFormatado]!['nome']!;
-    _estaLogado = true;
-    _persistir();
     notifyListeners();
+  }
+
+  Future<void> login({required String email, required String senha}) async {
+    final resposta = await _auth.signInWithPassword(
+      email: email.trim(),
+      password: senha,
+    );
+    if (resposta.session == null) {
+      throw const AuthException('Sessão indisponível');
+    }
+    _sincronizar();
+  }
+
+  /// Cadastra no Auth sem armazenar a senha ou criar uma sessão local.
+  /// Retorna false quando ainda é necessário confirmar o e-mail.
+  Future<bool> cadastrarNoSupabase({
+    required String nome,
+    required String email,
+    required String senha,
+  }) async {
+    final resposta = await Supabase.instance.client.auth.signUp(
+      email: email.trim(),
+      password: senha,
+      data: {'nome': nome.trim()},
+    );
+    final sessao = resposta.session;
+    if (sessao == null) return false;
+
+    _sincronizar();
     return true;
   }
 
-  /// Registra um novo usuário a partir do formulário de cadastro
-  void cadastrar({
+  Future<void> atualizarPerfil({
     required String nome,
     required String email,
-    String senha = '',
-  }) {
-    final emailFormatado = email.trim().toLowerCase();
-    _usuariosCadastrados[emailFormatado] = {
-      'nome': nome.trim(),
-      'senha': senha,
-    };
-    _nome = nome.trim();
-    _email = email.trim();
-    _estaLogado = true;
-    _persistir();
-    notifyListeners();
+  }) async {
+    await _auth.updateUser(
+      UserAttributes(
+        data: {'nome': nome.trim()},
+        email: email.trim() == this.email ? null : email.trim(),
+      ),
+    );
+    _sincronizar();
   }
 
-  /// Atualiza o perfil (nome e e-mail) do usuário conectado
-  void atualizarPerfil({required String nome, required String email}) {
-    final emailAntigo = _email.trim().toLowerCase();
-    final emailNovo = email.trim().toLowerCase();
-    final senha = _usuariosCadastrados[emailAntigo]?['senha'] ?? '';
-
-    if (emailAntigo != emailNovo) {
-      _usuariosCadastrados.remove(emailAntigo);
+  Future<void> logout() async {
+    try {
+      await _auth.signOut(scope: SignOutScope.local);
+    } finally {
+      _sincronizar();
     }
-    _nome = nome.trim();
-    _email = email.trim();
-    _usuariosCadastrados[emailNovo] = {
-      'nome': _nome,
-      'senha': senha,
-    };
-    _persistir();
-    notifyListeners();
-  }
-
-  /// Finaliza a sessão do usuário
-  void logout() {
-    _nome = 'Estudante';
-    _email = '';
-    _estaLogado = false;
-    _sessaoRestaurada = false;
-    _persistir();
-    notifyListeners();
   }
 }

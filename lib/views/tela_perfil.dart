@@ -8,7 +8,6 @@ import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 import 'home_screen.dart';
-import 'login_screen.dart';
 
 class TelaPerfil extends StatelessWidget {
   const TelaPerfil({super.key});
@@ -76,9 +75,26 @@ class TelaPerfil extends StatelessWidget {
                 const SizedBox(height: 24),
                 AppButton(
                   text: 'Salvar alterações',
-                  onPressed: () {
+                  onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
-                    sessao.atualizarPerfil(nome: nome.text, email: email.text);
+                    try {
+                      await sessao.atualizarPerfil(
+                        nome: nome.text,
+                        email: email.text,
+                      );
+                    } catch (_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Não foi possível atualizar o perfil.',
+                            ),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    if (!context.mounted || !sheetContext.mounted) return;
                     Navigator.pop(sheetContext);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -107,14 +123,19 @@ class TelaPerfil extends StatelessWidget {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(dialogContext);
-              SessaoUsuario.of(context).logout();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
-                (_) => false,
-              );
+              try {
+                await SessaoUsuario.of(context).logout();
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Não foi possível concluir a saída.'),
+                    ),
+                  );
+                }
+              }
             },
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Sair'),
