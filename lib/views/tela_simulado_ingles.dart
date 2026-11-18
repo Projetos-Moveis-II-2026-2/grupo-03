@@ -28,6 +28,8 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   late QuestaoRepository _repo;
   bool _carregando = true;
   bool _erroCarga = false;
+  bool _falhaConexao = false;
+  bool _controllerInicializado = false;
   ProgressoController? _progresso;
   FlashcardRepository? _flashcards;
 
@@ -60,6 +62,11 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     } on ProviderNotFoundException {
       _flashcards = null;
     }
+    final cache = _filtrarQuestoes(_repo.getAll());
+    if (cache.isNotEmpty) {
+      _inicializarController(_repo, cache);
+      _carregando = false;
+    }
     _carregarQuestoes(repo);
   }
 
@@ -68,49 +75,64 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     bool atualizar = false,
   }) async {
     setState(() {
-      _carregando = true;
+      _carregando = !_controllerInicializado;
       _erroCarga = false;
     });
     try {
       final questoes = await repo.carregar(atualizar: atualizar);
+      if (!mounted) return;
       if (questoes.isEmpty) throw StateError('Conteúdo indisponível');
-      _controller = SrsController(
-        repo,
-        questoesCustomizadas: widget.questoes?.isNotEmpty == true
-            ? widget.questoes
-            : questoes,
-        progresso: _progresso,
-        flashcards: _flashcards,
-      );
-      _controller.addListener(() {
-        _registrarBlocoSeConcluido();
-        if (mounted) setState(() {});
+      if (!_controllerInicializado) {
+        final filtradas = _filtrarQuestoes(questoes);
+        if (filtradas.isEmpty) throw StateError('Conteúdo indisponível');
+        _inicializarController(repo, filtradas);
+      }
+      setState(() {
+        _carregando = false;
+        _falhaConexao = false;
       });
-      _cronometro.start();
-      if (mounted) setState(() => _carregando = false);
     } catch (_) {
-      if (repo.hasCachedQuestions) {
-        _controller = SrsController(
-          repo,
-          questoesCustomizadas: repo.getAll(),
-          progresso: _progresso,
-          flashcards: _flashcards,
-        );
-        _controller.addListener(() {
-          _registrarBlocoSeConcluido();
-          if (mounted) setState(() {});
-        });
-        _cronometro.start();
-        if (mounted) setState(() => _carregando = false);
-        return;
+      if (!mounted) return;
+      if (!_controllerInicializado) {
+        final cache = widget.questoes?.isNotEmpty == true
+            ? widget.questoes!
+            : repo.getAll();
+        if (cache.isNotEmpty) _inicializarController(repo, cache);
       }
-      if (mounted) {
-        setState(() {
-          _carregando = false;
-          _erroCarga = true;
-        });
-      }
+      setState(() {
+        _carregando = false;
+        _erroCarga = !_controllerInicializado;
+        _falhaConexao = true;
+      });
     }
+  }
+
+  List<QuestaoSimulado> _filtrarQuestoes(List<QuestaoSimulado> questoes) {
+    final selecionadas = widget.questoes;
+    if (selecionadas == null || selecionadas.isEmpty) return questoes;
+    final ids = selecionadas.map((questao) => questao.id).toSet();
+    final correspondentes = questoes
+        .where((questao) => ids.contains(questao.id))
+        .toList();
+    return correspondentes.isNotEmpty ? correspondentes : selecionadas;
+  }
+
+  void _inicializarController(
+    QuestaoRepository repo,
+    List<QuestaoSimulado> questoes,
+  ) {
+    _controller = SrsController(
+      repo,
+      questoesCustomizadas: questoes,
+      progresso: _progresso,
+      flashcards: _flashcards,
+    );
+    _controller.addListener(() {
+      _registrarBlocoSeConcluido();
+      if (mounted) setState(() {});
+    });
+    _controllerInicializado = true;
+    _cronometro.start();
   }
 
   /// Registra o bloco no progresso uma única vez, ao concluir.
@@ -133,7 +155,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
 
   @override
   void dispose() {
-    if (!_carregando && !_erroCarga) {
+    if (_controllerInicializado) {
       _controller.dispose();
     }
     super.dispose();
@@ -191,7 +213,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: _carregando
+              child: _carregando && !_controllerInicializado
                   ? const CircularProgressIndicator()
                   : _erroCarga
                   ? Column(
@@ -208,9 +230,28 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
                         ),
                       ],
                     )
-                  : _controller.isFinished
-                  ? _construirTelaResultado(context, textTheme)
-                  : _construirPergunta(context, textTheme),
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (_carregando) const LinearProgressIndicator(),
+                        if (_falhaConexao) ...[
+                          const Text(
+                            'Sem conexão. Você pode continuar com as questões disponíveis.',
+                            textAlign: TextAlign.center,
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                _carregarQuestoes(_repo, atualizar: true),
+                            child: const Text('Tentar novamente'),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        _controller.isFinished
+                            ? _construirTelaResultado(context, textTheme)
+                            : _construirPergunta(context, textTheme),
+                      ],
+                    ),
             ),
           ),
         ),

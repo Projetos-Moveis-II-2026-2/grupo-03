@@ -10,19 +10,26 @@ import 'models/sessao_usuario.dart';
 import 'repositories/flashcard_repository.dart';
 import 'repositories/progresso_repository.dart';
 import 'repositories/questao_repository.dart';
+import 'services/conteudo_api.dart';
 import 'views/home_screen.dart';
 import 'views/login_screen.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (ConteudoApi.supabaseUrl.isEmpty ||
+      ConteudoApi.supabasePublishableKey.isEmpty) {
+    throw StateError(
+      'Configure SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY para iniciar o app.',
+    );
+  }
   final retorno = Uri.base;
   final recuperando =
       kIsWeb && retorno.queryParameters['fluxo'] == 'recuperacao';
   await Supabase.initialize(
     authOptions: FlutterAuthClientOptions(detectSessionInUri: !recuperando),
-    url: 'https://fknntomvtscxmnfuxmqe.supabase.co',
-    publishableKey: 'sb_publishable_kJoT334nomzZI9wFGcGX6w_Z--aRJ4E',
+    url: ConteudoApi.supabaseUrl,
+    publishableKey: ConteudoApi.supabasePublishableKey,
   );
   final prefs = await SharedPreferences.getInstance();
   await SessaoUsuario.instance.carregar(prefs);

@@ -34,6 +34,8 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
   late final FlashcardRepository _repo;
   bool _carregando = true;
   bool _erroCarga = false;
+  bool _falhaConexao = false;
+  bool _controllerInicializado = false;
   ProgressoController? _progresso;
 
   /// Mede o tempo efetivo do bloco para os "minutos estudados".
@@ -58,57 +60,69 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
     } on ProviderNotFoundException {
       _progresso = null;
     }
+    final cache = _filtrarCards(_repo.getAll());
+    if (cache.isNotEmpty) {
+      _inicializarController(cache);
+      _carregando = false;
+    }
     _carregarCards();
+  }
+
+  List<CardIngles> _filtrarCards(List<CardIngles> cards) {
+    final selecionados = widget.cardsCustomizados;
+    if (selecionados == null || selecionados.isEmpty) return cards;
+
+    final ids = selecionados.map((card) => card.id).toSet();
+    final porId = cards.where((card) => ids.contains(card.id)).toList();
+    if (porId.isNotEmpty) return porId;
+
+    final categorias = selecionados.map((card) => card.categoria).toSet();
+    return cards.where((card) => categorias.contains(card.categoria)).toList();
+  }
+
+  void _inicializarController(List<CardIngles> cards) {
+    _controller = FlashcardController(
+      _repo,
+      cardsCustomizados: cards,
+      progresso: _progresso,
+    );
+    _controller.addListener(() {
+      _registrarBlocoSeConcluido();
+      if (mounted) setState(() {});
+    });
+    _controllerInicializado = true;
+    _cronometro.start();
   }
 
   Future<void> _carregarCards({bool atualizar = false}) async {
     setState(() {
-      _carregando = true;
+      _carregando = !_controllerInicializado;
       _erroCarga = false;
     });
     try {
       final cards = await _repo.carregar(atualizar: atualizar);
-      final customizados = widget.cardsCustomizados;
-      final categoria = customizados == null || customizados.isEmpty
-          ? null
-          : customizados.first.categoria;
-      final filtrados = categoria == null
-          ? cards
-          : cards.where((card) => card.categoria == categoria).toList();
+      if (!mounted) return;
+      final filtrados = _filtrarCards(cards);
       if (filtrados.isEmpty) throw StateError('Conteúdo indisponível');
-      _controller = FlashcardController(
-        _repo,
-        cardsCustomizados: filtrados,
-        progresso: _progresso,
-      );
-      _controller.addListener(() {
-        _registrarBlocoSeConcluido();
-        if (mounted) setState(() {});
+      if (!_controllerInicializado) _inicializarController(filtrados);
+      setState(() {
+        _carregando = false;
+        _falhaConexao = false;
       });
-      _cronometro.start();
-      if (mounted) setState(() => _carregando = false);
     } catch (_) {
-      if (_repo.hasCachedCards) {
-        final cache = _repo.getAll();
-        _controller = FlashcardController(
-          _repo,
-          cardsCustomizados: cache,
-          progresso: _progresso,
-        );
-        _controller.addListener(() {
-          _registrarBlocoSeConcluido();
-          if (mounted) setState(() {});
-        });
-        _cronometro.start();
-        if (mounted) setState(() => _carregando = false);
-        return;
+      if (!mounted) return;
+      if (!_controllerInicializado) {
+        final cache = widget.cardsCustomizados?.isNotEmpty == true
+            ? widget.cardsCustomizados!
+            : _repo.getAll();
+        final filtrados = _filtrarCards(cache);
+        if (filtrados.isNotEmpty) _inicializarController(filtrados);
       }
-      if (mounted) {
-        setState(() {
-          _carregando = false;
-          _erroCarga = true;
-        });
-      }
+      setState(() {
+        _carregando = false;
+        _erroCarga = !_controllerInicializado;
+        _falhaConexao = true;
+      });
     }
   }
 
@@ -134,7 +148,7 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
 
   @override
   void dispose() {
-    if (!_carregando && !_erroCarga) {
+    if (_controllerInicializado) {
       _controller.dispose();
     }
     super.dispose();
@@ -163,7 +177,7 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: _carregando
+              child: _carregando && !_controllerInicializado
                   ? const CircularProgressIndicator()
                   : _erroCarga
                   ? Column(
@@ -174,14 +188,32 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
                         ),
                         const SizedBox(height: 12),
                         TextButton(
-                          onPressed: _carregarCards,
+                          onPressed: () => _carregarCards(atualizar: true),
                           child: const Text('Tentar novamente'),
                         ),
                       ],
                     )
-                  : _controller.isFinished
-                  ? _construirTelaConclusao(context)
-                  : _construirFluxoEstudo(context, textTheme),
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (_carregando) const LinearProgressIndicator(),
+                        if (_falhaConexao) ...[
+                          const Text(
+                            'Sem conexão. Você pode continuar com os cartões disponíveis.',
+                            textAlign: TextAlign.center,
+                          ),
+                          TextButton(
+                            onPressed: () => _carregarCards(atualizar: true),
+                            child: const Text('Tentar novamente'),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        _controller.isFinished
+                            ? _construirTelaConclusao(context)
+                            : _construirFluxoEstudo(context, textTheme),
+                      ],
+                    ),
             ),
           ),
         ),

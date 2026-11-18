@@ -39,13 +39,17 @@ class QuestaoRepository {
   /// Busca questões da tabela documentada `questoes_simulado` e conserva
   /// a resposta em memória durante a sessão.
   Future<List<QuestaoSimulado>> carregar({bool atualizar = false}) {
+    if (_carregamento != null) return _carregamento!;
     if (!atualizar && _remotoCarregado) return Future.value(getAll());
-    if (!atualizar && _carregamento != null) return _carregamento!;
     final request = _api.listar('questoes_simulado').then((rows) {
       final questoes = rows
           .map(QuestaoSimulado.fromJson)
           .where((q) => q.id.isNotEmpty)
           .toList();
+      // Preserva o cache válido quando o backend responde sem questões.
+      if (questoes.isEmpty) {
+        throw StateError('A API não retornou questões.');
+      }
       _questoes
         ..clear()
         ..addAll(questoes);

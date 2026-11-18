@@ -41,13 +41,18 @@ class FlashcardRepository {
   /// Busca conteúdo da tabela documentada `cards_vocabulario`, mantendo o
   /// último resultado em memória para navegação e uso durante a sessão.
   Future<List<CardIngles>> carregar({bool atualizar = false}) {
+    if (_carregamento != null) return _carregamento!;
     if (!atualizar && _remotoCarregado) return Future.value(getAll());
-    if (!atualizar && _carregamento != null) return _carregamento!;
     final request = _api.listar('cards_vocabulario').then((rows) {
       final cards = rows
           .map(CardIngles.fromJson)
           .where((c) => c.id.isNotEmpty)
           .toList();
+      // Não substitui um cache válido por uma resposta vazia. O chamador pode
+      // continuar a sessão e oferecer nova tentativa de atualização.
+      if (cards.isEmpty) {
+        throw StateError('A API não retornou flashcards.');
+      }
       _cards
         ..clear()
         ..addAll(cards);
