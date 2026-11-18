@@ -30,8 +30,10 @@ class TelaEstudoFlashcards extends StatefulWidget {
 }
 
 class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
-  late final FlashcardController _controller;
+  late FlashcardController _controller;
   late final FlashcardRepository _repo;
+  bool _carregando = true;
+  bool _erroCarga = false;
   ProgressoController? _progresso;
 
   /// Mede o tempo efetivo do bloco para os "minutos estudados".
@@ -56,16 +58,58 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
     } on ProviderNotFoundException {
       _progresso = null;
     }
-    _controller = FlashcardController(
-      repo,
-      cardsCustomizados: widget.cardsCustomizados,
-      progresso: _progresso,
-    );
-    _controller.addListener(() {
-      _registrarBlocoSeConcluido();
-      if (mounted) setState(() {});
+    _carregarCards();
+  }
+
+  Future<void> _carregarCards({bool atualizar = false}) async {
+    setState(() {
+      _carregando = true;
+      _erroCarga = false;
     });
-    _cronometro.start();
+    try {
+      final cards = await _repo.carregar(atualizar: atualizar);
+      final customizados = widget.cardsCustomizados;
+      final categoria = customizados == null || customizados.isEmpty
+          ? null
+          : customizados.first.categoria;
+      final filtrados = categoria == null
+          ? cards
+          : cards.where((card) => card.categoria == categoria).toList();
+      if (filtrados.isEmpty) throw StateError('Conteúdo indisponível');
+      _controller = FlashcardController(
+        _repo,
+        cardsCustomizados: filtrados,
+        progresso: _progresso,
+      );
+      _controller.addListener(() {
+        _registrarBlocoSeConcluido();
+        if (mounted) setState(() {});
+      });
+      _cronometro.start();
+      if (mounted) setState(() => _carregando = false);
+    } catch (_) {
+      if (_repo.hasCachedCards) {
+        final cache = _repo.getAll();
+        _controller = FlashcardController(
+          _repo,
+          cardsCustomizados: cache,
+          progresso: _progresso,
+        );
+        _controller.addListener(() {
+          _registrarBlocoSeConcluido();
+          if (mounted) setState(() {});
+        });
+        _cronometro.start();
+        if (mounted) setState(() => _carregando = false);
+        return;
+      }
+      if (mounted) {
+        setState(() {
+          _carregando = false;
+          _erroCarga = true;
+        });
+      }
+    }
   }
 
   /// Registra o bloco no progresso uma única vez, ao concluir.
@@ -90,7 +134,9 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (!_carregando && !_erroCarga) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -117,7 +163,23 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: _controller.isFinished
+              child: _carregando
+                  ? const CircularProgressIndicator()
+                  : _erroCarga
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Não foi possível carregar os cartões. Verifique sua conexão.',
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: _carregarCards,
+                          child: const Text('Tentar novamente'),
+                        ),
+                      ],
+                    )
+                  : _controller.isFinished
                   ? _construirTelaConclusao(context)
                   : _construirFluxoEstudo(context, textTheme),
             ),

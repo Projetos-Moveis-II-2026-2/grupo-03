@@ -24,7 +24,10 @@ class TelaSimuladoIngles extends StatefulWidget {
 }
 
 class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
-  late final SrsController _controller;
+  late SrsController _controller;
+  late QuestaoRepository _repo;
+  bool _carregando = true;
+  bool _erroCarga = false;
   ProgressoController? _progresso;
   FlashcardRepository? _flashcards;
 
@@ -46,6 +49,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     } on ProviderNotFoundException {
       repo = QuestaoRepository();
     }
+    _repo = repo;
     try {
       _progresso = context.read<ProgressoController>();
     } on ProviderNotFoundException {
@@ -56,17 +60,57 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     } on ProviderNotFoundException {
       _flashcards = null;
     }
-    _controller = SrsController(
-      repo,
-      questoesCustomizadas: widget.questoes,
-      progresso: _progresso,
-      flashcards: _flashcards,
-    );
-    _controller.addListener(() {
-      _registrarBlocoSeConcluido();
-      if (mounted) setState(() {});
+    _carregarQuestoes(repo);
+  }
+
+  Future<void> _carregarQuestoes(
+    QuestaoRepository repo, {
+    bool atualizar = false,
+  }) async {
+    setState(() {
+      _carregando = true;
+      _erroCarga = false;
     });
-    _cronometro.start();
+    try {
+      final questoes = await repo.carregar(atualizar: atualizar);
+      if (questoes.isEmpty) throw StateError('Conteúdo indisponível');
+      _controller = SrsController(
+        repo,
+        questoesCustomizadas: widget.questoes?.isNotEmpty == true
+            ? widget.questoes
+            : questoes,
+        progresso: _progresso,
+        flashcards: _flashcards,
+      );
+      _controller.addListener(() {
+        _registrarBlocoSeConcluido();
+        if (mounted) setState(() {});
+      });
+      _cronometro.start();
+      if (mounted) setState(() => _carregando = false);
+    } catch (_) {
+      if (repo.hasCachedQuestions) {
+        _controller = SrsController(
+          repo,
+          questoesCustomizadas: repo.getAll(),
+          progresso: _progresso,
+          flashcards: _flashcards,
+        );
+        _controller.addListener(() {
+          _registrarBlocoSeConcluido();
+          if (mounted) setState(() {});
+        });
+        _cronometro.start();
+        if (mounted) setState(() => _carregando = false);
+        return;
+      }
+      if (mounted) {
+        setState(() {
+          _carregando = false;
+          _erroCarga = true;
+        });
+      }
+    }
   }
 
   /// Registra o bloco no progresso uma única vez, ao concluir.
@@ -89,7 +133,9 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (!_carregando && !_erroCarga) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -106,7 +152,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     if (_opcaoSelecionada != null) {
       _controller.processAnswer(_opcaoSelecionada!);
     }
-    
+
     setState(() {
       _opcaoSelecionada = null;
       _jaRespondeu = false;
@@ -145,7 +191,24 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: _controller.isFinished
+              child: _carregando
+                  ? const CircularProgressIndicator()
+                  : _erroCarga
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Não foi possível carregar as questões. Verifique sua conexão.',
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () =>
+                              _carregarQuestoes(_repo, atualizar: true),
+                          child: const Text('Tentar novamente'),
+                        ),
+                      ],
+                    )
+                  : _controller.isFinished
                   ? _construirTelaResultado(context, textTheme)
                   : _construirPergunta(context, textTheme),
             ),
@@ -157,7 +220,8 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
 
   Widget _construirPergunta(BuildContext context, TextTheme textTheme) {
     final questao = _controller.currentQuestion!;
-    final progresso = (_controller.currentIndex + 1) / _controller.totalQuestions;
+    final progresso =
+        (_controller.currentIndex + 1) / _controller.totalQuestions;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -446,10 +510,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
 
           const SizedBox(height: 28),
 
-          AppButton(
-            text: 'Refazer simulado',
-            onPressed: _reiniciarSimulado,
-          ),
+          AppButton(text: 'Refazer simulado', onPressed: _reiniciarSimulado),
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: () {
