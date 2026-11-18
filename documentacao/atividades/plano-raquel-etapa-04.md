@@ -222,6 +222,12 @@ Trata-se de um sistema de recomendação adaptativo (baseado em regras e pontua�
 
 ---
 
+> 🔧 **Ajustes após a integração com a Etapa 3 (18/11/2026):**
+> - `contarPendentes`/`contarDominados` agora consideram apenas os cartões atuais. Antes, os cartões embutidos continuavam sendo contados quando a API usava outros ids.
+> - `QuestaoSimulado.fromJson` aceita `card_id` numérico.
+> - O progresso passou a ser salvo pelo UUID do Supabase Auth (`SessaoUsuario.id`) em vez do e-mail. Assim, trocar o e-mail no Perfil não zera a ofensiva nem os minutos.
+> - Testes: `test/integracao_supabase_progresso_test.dart`.
+
 ## 6. Parte E — Qualidade e Build Final (R7, R8)
 
 ### 6.1 `flutter analyze`

@@ -99,7 +99,8 @@ class QuestaoSimulado {
       indiceCorreto:
           (json['indiceCorreto'] ?? json['indice_correto'] ?? 0) as int,
       explicacao: (json['explicacao'] ?? '') as String,
-      cardId: (json['cardId'] ?? json['card_id']) as String?,
+      // `?.toString()` aceita FK numérica ou texto vinda do Supabase.
+      cardId: (json['cardId'] ?? json['card_id'])?.toString(),
     );
   }
 

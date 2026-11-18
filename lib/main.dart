@@ -88,7 +88,14 @@ class MyApp extends StatelessWidget {
           ),
           update: (_, sessao, controller) {
             final progresso = controller!;
-            progresso.carregarUsuario(sessao.estaLogado ? sessao.email : '');
+            progresso.carregarUsuario(
+              sessao.estaLogado
+                  ? ProgressoController.chaveDoUsuario(
+                      id: sessao.id,
+                      email: sessao.email,
+                    )
+                  : '',
+            );
             return progresso;
           },
         ),

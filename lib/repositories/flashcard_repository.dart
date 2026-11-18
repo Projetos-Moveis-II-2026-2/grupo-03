@@ -105,14 +105,19 @@ class FlashcardRepository {
   }
 
   /// Quantidade de cartões com revisão vencida (disponíveis agora).
+  ///
+  /// Considera apenas os cartões do conteúdo atual (`_cards`): intervalos
+  /// antigos de cartões que não vieram da API não entram na contagem.
   int contarPendentes() {
     final now = DateTime.now();
-    return _intervals.values.where((i) => !i.nextReview.isAfter(now)).length;
+    return _cards
+        .where((c) => !getInterval(c.id).nextReview.isAfter(now))
+        .length;
   }
 
-  /// Quantidade de palavras dominadas pelo estudante.
-  int contarDominados() => _intervals.values
-      .where((i) => i.repetition >= repeticoesParaDominar)
+  /// Quantidade de palavras dominadas pelo estudante (apenas do conteúdo atual).
+  int contarDominados() => _cards
+      .where((c) => getInterval(c.id).repetition >= repeticoesParaDominar)
       .length;
 
   /// Busca um bloco de flashcards para a próxima sessão de revisão.
