@@ -45,7 +45,8 @@ class CardIngles {
       fonetica: 'kân-SÍS-tên-si',
       traducao: 'Consistência / Constância',
       exemploIngles: 'Small daily consistency brings extraordinary results.',
-      traducaoExemplo: 'Pequena consistência diária traz resultados extraordinários.',
+      traducaoExemplo:
+          'Pequena consistência diária traz resultados extraordinários.',
       categoria: 'Hábitos',
     ),
     CardIngles(
@@ -62,21 +63,26 @@ class CardIngles {
       termo: 'Reward',
       fonetica: 'ri-WÓRD',
       traducao: 'Recompensa / Prêmio',
-      exemploIngles: 'Give your brain a healthy reward after completing a block.',
-      traducaoExemplo: 'Dê ao seu cérebro uma recompensa saudável após concluir um bloco.',
+      exemploIngles:
+          'Give your brain a healthy reward after completing a block.',
+      traducaoExemplo:
+          'Dê ao seu cérebro uma recompensa saudável após concluir um bloco.',
       categoria: 'Neurociência & TDAH',
     ),
   ];
 
   factory CardIngles.fromJson(Map<String, dynamic> json) {
     return CardIngles(
-      id: json['id'] as String? ?? '',
-      termo: json['termo'] as String? ?? '',
-      fonetica: json['fonetica'] as String? ?? '',
-      traducao: json['traducao'] as String? ?? '',
-      exemploIngles: json['exemploIngles'] as String? ?? '',
-      traducaoExemplo: json['traducaoExemplo'] as String? ?? '',
-      categoria: json['categoria'] as String? ?? '',
+      id: '${json['id'] ?? ''}',
+      termo: (json['termo'] ?? json['palavra'] ?? '') as String,
+      fonetica:
+          (json['fonetica'] ?? json['pronuncia_fonetica'] ?? '') as String,
+      traducao: (json['traducao'] ?? '') as String,
+      exemploIngles:
+          (json['exemploIngles'] ?? json['exemplo_ingles'] ?? '') as String,
+      traducaoExemplo:
+          (json['traducaoExemplo'] ?? json['traducao_exemplo'] ?? '') as String,
+      categoria: (json['categoria'] ?? '') as String,
     );
   }
 

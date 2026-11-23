@@ -34,25 +34,24 @@ class QuestaoSimulado {
         'Consistência diária',
       ],
       indiceCorreto: 1,
-      explicacao: '"Achievement" significa conquista ou realização de um objetivo.',
+      explicacao:
+          '"Achievement" significa conquista ou realização de um objetivo.',
     ),
     QuestaoSimulado(
       id: 'q_2',
       cardId: 'card_1',
-      enunciado: 'Complete a frase com foco nos estudos: "Take a deep breath and keep your _____ on this task."',
-      opcoes: [
-        'focus',
-        'break',
-        'schedule',
-        'luggage',
-      ],
+      enunciado:
+          'Complete a frase com foco nos estudos: "Take a deep breath and keep your _____ on this task."',
+      opcoes: ['focus', 'break', 'schedule', 'luggage'],
       indiceCorreto: 0,
-      explicacao: '"Focus" (foco/concentração) é a palavra que melhor completa o sentido da frase.',
+      explicacao:
+          '"Focus" (foco/concentração) é a palavra que melhor completa o sentido da frase.',
     ),
     QuestaoSimulado(
       id: 'q_3',
       cardId: 'card_2',
-      enunciado: 'O que significa a expressão "Breakdown" em um contexto de produtividade?',
+      enunciado:
+          'O que significa a expressão "Breakdown" em um contexto de produtividade?',
       opcoes: [
         'Desistir de uma meta difícil',
         'Trabalhar sem fazer pausas',
@@ -60,25 +59,24 @@ class QuestaoSimulado {
         'Chegar atrasado a um compromisso',
       ],
       indiceCorreto: 2,
-      explicacao: '"Breakdown" refere-se a fragmentar um objetivo complexo em etapas curtas e fáceis.',
+      explicacao:
+          '"Breakdown" refere-se a fragmentar um objetivo complexo em etapas curtas e fáceis.',
     ),
     QuestaoSimulado(
       id: 'q_4',
       cardId: 'card_3',
-      enunciado: 'Qual termo representa o conceito de "Consistência / Constância"?',
-      opcoes: [
-        'Schedule',
-        'Reward',
-        'Boarding pass',
-        'Consistency',
-      ],
+      enunciado:
+          'Qual termo representa o conceito de "Consistência / Constância"?',
+      opcoes: ['Schedule', 'Reward', 'Boarding pass', 'Consistency'],
       indiceCorreto: 3,
-      explicacao: '"Consistency" é a prática de manter o hábito de estudos de forma constante.',
+      explicacao:
+          '"Consistency" é a prática de manter o hábito de estudos de forma constante.',
     ),
     QuestaoSimulado(
       id: 'q_5',
       cardId: 'card_5',
-      enunciado: 'Qual a tradução da palavra "Reward", essencial para a motivação no TDAH?',
+      enunciado:
+          'Qual a tradução da palavra "Reward", essencial para a motivação no TDAH?',
       opcoes: [
         'Recompensa / Prêmio',
         'Horário de dormir',
@@ -86,18 +84,23 @@ class QuestaoSimulado {
         'Lista de tarefas pendentes',
       ],
       indiceCorreto: 0,
-      explicacao: '"Reward" significa recompensa ou prêmio pelo esforço realizado.',
+      explicacao:
+          '"Reward" significa recompensa ou prêmio pelo esforço realizado.',
     ),
   ];
 
   factory QuestaoSimulado.fromJson(Map<String, dynamic> json) {
     return QuestaoSimulado(
-      id: json['id'] as String? ?? '',
-      enunciado: json['enunciado'] as String? ?? '',
-      opcoes: List<String>.from(json['opcoes'] as List? ?? []),
-      indiceCorreto: json['indiceCorreto'] as int? ?? 0,
-      explicacao: json['explicacao'] as String? ?? '',
-      cardId: (json['cardId'] ?? json['card_id']) as String?,
+      id: '${json['id'] ?? ''}',
+      enunciado: (json['enunciado'] ?? json['pergunta'] ?? '') as String,
+      opcoes: List<String>.from(
+        json['opcoes'] as List? ?? json['alternativas'] as List? ?? const [],
+      ),
+      indiceCorreto:
+          (json['indiceCorreto'] ?? json['indice_correto'] ?? 0) as int,
+      explicacao: (json['explicacao'] ?? '') as String,
+      // `?.toString()` aceita FK numérica ou texto vinda do Supabase.
+      cardId: (json['cardId'] ?? json['card_id'])?.toString(),
     );
   }
 

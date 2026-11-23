@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/card_ingles.dart';
+import '../repositories/flashcard_repository.dart';
 import '../theme/app_colors.dart';
 import 'tela_estudo_flashcards.dart';
+import 'tela_gerar_deck.dart';
 
 /// Modelo simples para representar um Baralho (Deck) de estudo.
 class DeckTema {
@@ -22,7 +25,7 @@ class DeckTema {
 }
 
 /// Tela simples de seleção de temas de inglês para estudo em blocos curtos.
-class TelaDecksIngles extends StatelessWidget {
+class TelaDecksIngles extends StatefulWidget {
   const TelaDecksIngles({super.key});
 
   /// Lista acadêmica de baralhos temáticos (3 a 5 cards cada para não cansar)
@@ -116,8 +119,47 @@ class TelaDecksIngles extends StatelessWidget {
   ];
 
   @override
+  State<TelaDecksIngles> createState() => _TelaDecksInglesState();
+}
+
+class _TelaDecksInglesState extends State<TelaDecksIngles> {
+  /// Decks gerados automaticamente, agrupados por tema (mais recentes antes).
+  List<DeckTema> _decksGerados() {
+    List<CardIngles> gerados;
+    try {
+      gerados = context.read<FlashcardRepository>().cardsGerados;
+    } on ProviderNotFoundException {
+      return const [];
+    }
+    final porTema = <String, List<CardIngles>>{};
+    for (final card in gerados) {
+      porTema.putIfAbsent(card.categoria, () => []).add(card);
+    }
+    return [
+      for (final entrada in porTema.entries.toList().reversed)
+        DeckTema(
+          id: entrada.key,
+          titulo: entrada.key,
+          descricao: 'Gerado automaticamente a partir do tema.',
+          icone: Icons.auto_awesome_outlined,
+          cards: entrada.value,
+        ),
+    ];
+  }
+
+  Future<void> _abrirGerador() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const TelaGerarDeck()),
+    );
+    // Atualiza a lista com o deck que acabou de ser gerado.
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final decksGerados = _decksGerados();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -152,8 +194,35 @@ class TelaDecksIngles extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
+                  // Geração automática de decks (Datamuse + dicionário)
+                  OutlinedButton.icon(
+                    onPressed: _abrirGerador,
+                    icon: const Icon(Icons.auto_awesome_outlined),
+                    label: const Text('Gerar deck automático'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  if (decksGerados.isNotEmpty) ...[
+                    Text(
+                      'Seus decks gerados',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...decksGerados.map((deck) => _CardDeckItem(deck: deck)),
+                    const SizedBox(height: 8),
+                  ],
+
                   // Lista de baralhos
-                  ...baralhos.map((deck) => _CardDeckItem(deck: deck)),
+                  ...TelaDecksIngles.baralhos.map(
+                    (deck) => _CardDeckItem(deck: deck),
+                  ),
                 ],
               ),
             ),

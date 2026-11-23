@@ -44,6 +44,12 @@ class ProgressoController extends ChangeNotifier {
 
   String? get usuarioId => _usuarioId;
 
+  /// Chave estável do progresso: o UUID do Supabase Auth, que não muda
+  /// quando o estudante troca o e-mail no Perfil. Usa o e-mail apenas como
+  /// alternativa quando ainda não há UUID (ex.: sessão local em testes).
+  static String chaveDoUsuario({String? id, required String email}) =>
+      (id != null && id.trim().isNotEmpty) ? id.trim() : email;
+
   /// Carrega o progresso do usuário informado (chamado ao logar/trocar conta).
   Future<void> carregarUsuario(String usuarioId) async {
     final id = usuarioId.trim().toLowerCase();
