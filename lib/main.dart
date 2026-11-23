@@ -20,7 +20,8 @@ Future<void> main() async {
   if (ConteudoApi.supabaseUrl.isEmpty ||
       ConteudoApi.supabasePublishableKey.isEmpty) {
     throw StateError(
-      'Configure SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY para iniciar o app.',
+      'Configure SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY no arquivo .env '
+      'e rode com: flutter run --dart-define-from-file=.env',
     );
   }
   final retorno = Uri.base;

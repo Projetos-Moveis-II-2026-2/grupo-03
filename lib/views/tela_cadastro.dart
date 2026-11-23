@@ -67,6 +67,12 @@ class _TelaCadastroState extends State<TelaCadastro> {
       } else {
         Navigator.pop(context);
       }
+    } on AuthRetryableFetchException {
+      if (!mounted) return;
+      _mostrarErro(
+        'Não foi possível conectar ao servidor. '
+        'Verifique sua conexão e tente novamente.',
+      );
     } on AuthException catch (erro) {
       if (!mounted) return;
       final mensagem = switch (erro.code) {
