@@ -60,10 +60,14 @@ class _TelaCadastroState extends State<TelaCadastro> {
         ),
       );
       if (autenticado) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute<void>(builder: (context) => const HomeScreen()),
-        );
+        if (!Navigator.canPop(context)) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute<void>(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          Navigator.popUntil(context, (route) => route.isFirst);
+        }
       } else {
         Navigator.pop(context);
       }
