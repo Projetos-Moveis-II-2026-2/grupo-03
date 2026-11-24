@@ -126,6 +126,9 @@ class ProgressoController extends ChangeNotifier {
 
   List<String> get conquistas => List.unmodifiable(_progresso.conquistas);
 
+  List<String> get expressoesAprendidas =>
+      List.unmodifiable(_progresso.expressoesAprendidas);
+
   /// Cópia somente leitura do progresso (útil para serviços e testes).
   ProgressoEstudo get progresso =>
       ProgressoEstudo.fromJson(_progresso.toJson());
@@ -190,6 +193,13 @@ class ProgressoController extends ChangeNotifier {
     _progresso.conquistas.add(conquistaId);
     _salvar();
     return true;
+  }
+
+  /// Registra uma expressão cultural aprendida (ignorada se já colecionada).
+  void registrarExpressao(String expressaoId) {
+    if (_progresso.expressoesAprendidas.contains(expressaoId)) return;
+    _progresso.expressoesAprendidas.add(expressaoId);
+    _salvar();
   }
 
   void _atualizarOfensiva(DateTime hoje) {

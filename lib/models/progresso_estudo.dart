@@ -38,6 +38,9 @@ class ProgressoEstudo {
   /// Identificadores das conquistas leves já obtidas.
   List<String> conquistas;
 
+  /// Identificadores das expressões culturais em inglês já aprendidas.
+  List<String> expressoesAprendidas;
+
   ProgressoEstudo({
     this.ofensivaAtual = 0,
     this.maiorOfensiva = 0,
@@ -50,8 +53,10 @@ class ProgressoEstudo {
     this.respostasTotais = 0,
     Map<String, int>? errosPorCard,
     List<String>? conquistas,
+    List<String>? expressoesAprendidas,
   })  : errosPorCard = errosPorCard ?? {},
-        conquistas = conquistas ?? [];
+        conquistas = conquistas ?? [],
+        expressoesAprendidas = expressoesAprendidas ?? [];
 
   Map<String, dynamic> toJson() => {
         'ofensivaAtual': ofensivaAtual,
@@ -65,6 +70,7 @@ class ProgressoEstudo {
         'respostasTotais': respostasTotais,
         'errosPorCard': errosPorCard,
         'conquistas': conquistas,
+        'expressoesAprendidas': expressoesAprendidas,
       };
 
   factory ProgressoEstudo.fromJson(Map<String, dynamic> json) {
@@ -73,6 +79,7 @@ class ProgressoEstudo {
 
     final errosRaw = json['errosPorCard'];
     final conquistasRaw = json['conquistas'];
+    final expressoesRaw = json['expressoesAprendidas'];
 
     return ProgressoEstudo(
       ofensivaAtual: (json['ofensivaAtual'] as num?)?.toInt() ?? 0,
@@ -91,6 +98,9 @@ class ProgressoEstudo {
           : null,
       conquistas: conquistasRaw is List
           ? conquistasRaw.map((e) => e.toString()).toList()
+          : null,
+      expressoesAprendidas: expressoesRaw is List
+          ? expressoesRaw.map((e) => e.toString()).toList()
           : null,
     );
   }

@@ -44,6 +44,7 @@ class ContextoRecompensa {
   final int blocosConcluidos;
   final int ofensiva;
   final int palavrasDominadas;
+  final int minutosEstudados;
   final Set<String> conquistasObtidas;
 
   const ContextoRecompensa({
@@ -52,6 +53,7 @@ class ContextoRecompensa {
     this.blocosConcluidos = 1,
     this.ofensiva = 1,
     this.palavrasDominadas = 0,
+    this.minutosEstudados = 0,
     this.conquistasObtidas = const {},
   });
 
@@ -215,6 +217,24 @@ class RecompensaService {
     titulo: 'Focus Champion',
     descricao: 'Concluiu 10 blocos curtos de estudo.',
   );
+  static const Conquista quinzePalavras = Conquista(
+    id: 'word_collector',
+    emoji: '📖',
+    titulo: 'Word Collector',
+    descricao: 'Dominou 15 palavras em inglês.',
+  );
+  static const Conquista vinteCincoBlocos = Conquista(
+    id: 'consistent_mind',
+    emoji: '🧭',
+    titulo: 'Consistent Mind',
+    descricao: 'Concluiu 25 blocos curtos de estudo.',
+  );
+  static const Conquista umaHoraFoco = Conquista(
+    id: 'deep_focus',
+    emoji: '⏳',
+    titulo: 'Deep Focus',
+    descricao: 'Acumulou 60 minutos de estudo focado.',
+  );
 
   /// Conquistas surpresa (repetíveis, não persistidas).
   static const List<Conquista> conquistasSurpresa = [
@@ -250,6 +270,9 @@ class RecompensaService {
     if (c.ofensiva >= 3) iniciaOfensiva,
     if (c.palavrasDominadas >= 5) wordMaster,
     if (c.blocosConcluidos >= 10) focusChampion,
+    if (c.palavrasDominadas >= 15) quinzePalavras,
+    if (c.blocosConcluidos >= 25) vinteCincoBlocos,
+    if (c.minutosEstudados >= 60) umaHoraFoco,
   ];
 
   ResultadoRecompensa sortear(ContextoRecompensa contexto) {
@@ -288,11 +311,13 @@ class RecompensaService {
         blocosConcluidos: progresso?.blocosConcluidos ?? 1,
         ofensiva: progresso?.ofensiva ?? 1,
         palavrasDominadas: palavrasDominadas,
+        minutosEstudados: progresso?.minutosEstudados ?? 0,
         conquistasObtidas: progresso?.conquistas.toSet() ?? const {},
       ),
     );
+    progresso?.registrarExpressao(resultado.mensagem.id);
     final conquista = resultado.conquista;
-    if (conquista != null && conquista.marco) {
+    if (conquista != null) {
       progresso?.registrarConquista(conquista.id);
     }
     return resultado;
