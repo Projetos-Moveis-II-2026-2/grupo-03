@@ -19,6 +19,40 @@ class FlashcardWidget extends StatefulWidget {
     required this.onAvaliar,
   });
 
+  static String formatarFoneticaAcessivel(String fonetica) {
+    if (!fonetica.startsWith('/') && !fonetica.startsWith('[')) {
+      return fonetica;
+    }
+    var limpia = fonetica.replaceAll(RegExp(r'[/\[\]]'), '');
+    const mapTokens = <String, String>{
+      'tʃ': 'tch',
+      'dʒ': 'dj',
+      'ʃ': 'ch',
+      'θ': 'th',
+      'ð': 'th',
+      'iː': 'ii',
+      'uː': 'uu',
+      'ə': 'â',
+      'æ': 'é',
+      'ɔː': 'ó',
+      'ɑː': 'á',
+      'eɪ': 'êi',
+      'aɪ': 'ái',
+      'oʊ': 'ôu',
+      'aʊ': 'áu',
+      'ˈ': "''",
+      'ˌ': "''",
+      'ɹ': 'r',
+      'ɪ': 'i',
+      'ʊ': 'u',
+    };
+    final sortedKeys = mapTokens.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
+    for (final key in sortedKeys) {
+      limpia = limpia.replaceAll(key, mapTokens[key]!);
+    }
+    return limpia;
+  }
+
   @override
   State<FlashcardWidget> createState() => FlashcardWidgetState();
 }
@@ -104,13 +138,14 @@ class FlashcardWidgetState extends State<FlashcardWidget>
 
   Widget _construirFaceFrente(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final minAltura = (MediaQuery.sizeOf(context).height * 0.42).clamp(240.0, 340.0);
 
     return InkWell(
       onTap: _alternarFace,
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 340),
+        constraints: BoxConstraints(minHeight: minAltura),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: AppColors.card,
@@ -169,7 +204,7 @@ class FlashcardWidgetState extends State<FlashcardWidget>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        widget.card.fonetica,
+                        FlashcardWidget.formatarFoneticaAcessivel(widget.card.fonetica),
                         style: textTheme.titleSmall?.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w700,
@@ -228,10 +263,11 @@ class FlashcardWidgetState extends State<FlashcardWidget>
 
   Widget _construirFaceVerso(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final minAltura = (MediaQuery.sizeOf(context).height * 0.42).clamp(240.0, 340.0);
 
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 340),
+      constraints: BoxConstraints(minHeight: minAltura),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.card,
