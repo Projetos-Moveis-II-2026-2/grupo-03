@@ -123,14 +123,37 @@ class TelaDecksIngles extends StatefulWidget {
 }
 
 class _TelaDecksInglesState extends State<TelaDecksIngles> {
+  late final FlashcardRepository _repo;
+  bool _carregando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      _repo = context.read<FlashcardRepository>();
+    } on ProviderNotFoundException {
+      _repo = FlashcardRepository();
+    }
+    _carregarDecks();
+  }
+
+  Future<void> _carregarDecks() async {
+    if (_repo.hasRemoteData) return;
+    _carregando = true;
+    try {
+      await _repo.carregar();
+    } catch (_) {
+      // Offline ou erro na API: mantém o catálogo embutido como fallback.
+    } finally {
+      if (mounted) {
+        setState(() => _carregando = false);
+      }
+    }
+  }
+
   /// Decks gerados automaticamente, agrupados por tema (mais recentes antes).
   List<DeckTema> _decksGerados() {
-    List<CardIngles> gerados;
-    try {
-      gerados = context.read<FlashcardRepository>().cardsGerados;
-    } on ProviderNotFoundException {
-      return const [];
-    }
+    final gerados = _repo.cardsGerados;
     final porTema = <String, List<CardIngles>>{};
     for (final card in gerados) {
       porTema.putIfAbsent(card.categoria, () => []).add(card);
@@ -142,6 +165,29 @@ class _TelaDecksInglesState extends State<TelaDecksIngles> {
           titulo: entrada.key,
           descricao: 'Gerado automaticamente a partir do tema.',
           icone: Icons.auto_awesome_outlined,
+          cards: entrada.value,
+        ),
+    ];
+  }
+
+  List<DeckTema> _decksCatalogo() {
+    if (!_repo.hasRemoteData) return TelaDecksIngles.baralhos;
+    final geradosIds = _repo.cardsGerados.map((c) => c.id).toSet();
+    final porCategoria = <String, List<CardIngles>>{};
+    for (final card in _repo.getAll()) {
+      if (geradosIds.contains(card.id)) continue;
+      final categoria = card.categoria.trim().isEmpty
+          ? 'Vocabulário Geral'
+          : card.categoria;
+      porCategoria.putIfAbsent(categoria, () => []).add(card);
+    }
+    return [
+      for (final entrada in porCategoria.entries)
+        DeckTema(
+          id: entrada.key,
+          titulo: entrada.key,
+          descricao: 'Vocabulário de ${entrada.key}.',
+          icone: Icons.style_outlined,
           cards: entrada.value,
         ),
     ];
@@ -171,62 +217,71 @@ class _TelaDecksInglesState extends State<TelaDecksIngles> {
         ),
       ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Escolha um tema',
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Blocos curtos de 3 a 5 cartões para aprender sem cansaço.',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+        child: Column(
+          children: [
+            if (_carregando) const LinearProgressIndicator(minHeight: 2),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Escolha um tema',
+                          style: textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Blocos curtos de 3 a 5 cartões para aprender sem cansaço.',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: AppColors.textPrimary.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
 
-                  // Geração automática de decks (Datamuse + dicionário)
-                  OutlinedButton.icon(
-                    onPressed: _abrirGerador,
-                    icon: const Icon(Icons.auto_awesome_outlined),
-                    label: const Text('Gerar deck automático'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(52),
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
+                        // Geração automática de decks (Datamuse + dicionário)
+                        OutlinedButton.icon(
+                          onPressed: _abrirGerador,
+                          icon: const Icon(Icons.auto_awesome_outlined),
+                          label: const Text('Gerar deck automático'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        if (decksGerados.isNotEmpty) ...[
+                          Text(
+                            'Seus decks gerados',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...decksGerados.map(
+                            (deck) => _CardDeckItem(deck: deck),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+
+                        // Lista de baralhos
+                        ..._decksCatalogo().map(
+                          (deck) => _CardDeckItem(deck: deck),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  if (decksGerados.isNotEmpty) ...[
-                    Text(
-                      'Seus decks gerados',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...decksGerados.map((deck) => _CardDeckItem(deck: deck)),
-                    const SizedBox(height: 8),
-                  ],
-
-                  // Lista de baralhos
-                  ...TelaDecksIngles.baralhos.map(
-                    (deck) => _CardDeckItem(deck: deck),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

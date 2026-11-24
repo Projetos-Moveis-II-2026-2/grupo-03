@@ -2,24 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/progresso_controller.dart';
+import '../models/card_ingles.dart';
 import '../models/sessao_usuario.dart';
 import '../repositories/flashcard_repository.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
+import '../widgets/conquistas_dialog.dart';
 import 'tela_decks_ingles.dart';
 import 'tela_estudo_flashcards.dart';
 import 'tela_perfil.dart';
 import 'tela_simulado_ingles.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final repo = _lerFlashcardRepository(context);
+      if (!repo.hasRemoteData) {
+        repo.carregar().catchError((_) => <CardIngles>[]);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final sessao = SessaoUsuario.of(context, listen: true);
     // Métricas reais: a Home é reconstruída sempre que um bloco é concluído.
     final progresso = ProgressoController.of(context, listen: true);
-    final flashcardRepo = _lerFlashcardRepository(context);
+    final flashcardRepo = _lerFlashcardRepository(context, listen: true);
     final pendentes = flashcardRepo.contarPendentes();
     final dominadas = flashcardRepo.contarDominados();
     final ofensiva = progresso.ofensiva;
@@ -271,7 +290,16 @@ class HomeScreen extends StatelessWidget {
         indicatorColor: AppColors.highlight,
         elevation: 0,
         onDestinationSelected: (index) {
-          if (index == 3) {
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (context) => const TelaDecksIngles(),
+              ),
+            );
+          } else if (index == 2) {
+            mostrarConquistasDialog(context);
+          } else if (index == 3) {
             Navigator.push(
               context,
               MaterialPageRoute<void>(builder: (context) => const TelaPerfil()),
@@ -308,9 +336,12 @@ class HomeScreen extends StatelessWidget {
 /// Formata a ofensiva no singular/plural (ex.: "1 dia", "3 dias").
 String formatarDias(int dias) => dias == 1 ? '1 dia' : '$dias dias';
 
-FlashcardRepository _lerFlashcardRepository(BuildContext context) {
+FlashcardRepository _lerFlashcardRepository(
+  BuildContext context, {
+  bool listen = false,
+}) {
   try {
-    return context.read<FlashcardRepository>();
+    return Provider.of<FlashcardRepository>(context, listen: listen);
   } on ProviderNotFoundException {
     return FlashcardRepository();
   }

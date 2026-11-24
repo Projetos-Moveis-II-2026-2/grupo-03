@@ -28,6 +28,12 @@ class QuestaoRepository {
   /// Separadas do conteúdo da API e persistidas no aparelho.
   static const String _prefsGeradasKey = 'focodeck_questoes_geradas';
   final List<QuestaoSimulado> _geradas = [];
+  String _usuarioId = '';
+
+  String get _chaveIntervalos =>
+      _usuarioId.isEmpty ? _prefsKey : '${_prefsKey}_$_usuarioId';
+  String get _chaveGeradas =>
+      _usuarioId.isEmpty ? _prefsGeradasKey : '${_prefsGeradasKey}_$_usuarioId';
 
   QuestaoRepository({SharedPreferences? prefs, ConteudoApi? api})
     : _prefs = prefs,
@@ -37,11 +43,25 @@ class QuestaoRepository {
       _intervals[q.id] = SrsInterval();
     }
     _carregarDoPrefs();
-    _carregarGeradas();
+    _carregarGeradasDoPrefs();
   }
 
-  void _carregarGeradas() {
-    final raw = _prefs?.getString(_prefsGeradasKey);
+  /// Define o usuário ativo para isolar intervalos SRS e questões geradas.
+  void definirUsuario(String usuarioId) {
+    final id = usuarioId.trim().toLowerCase();
+    if (id == _usuarioId) return;
+    _usuarioId = id;
+    _geradas.clear();
+    _intervals.clear();
+    for (final q in _questoes) {
+      _intervals[q.id] = SrsInterval();
+    }
+    _carregarDoPrefs();
+    _carregarGeradasDoPrefs();
+  }
+
+  void _carregarGeradasDoPrefs() {
+    final raw = _prefs?.getString(_chaveGeradas);
     if (raw == null || raw.isEmpty) return;
     try {
       final lista = jsonDecode(raw);
@@ -67,7 +87,7 @@ class QuestaoRepository {
       _intervals.putIfAbsent(questao.id, SrsInterval.new);
     }
     _prefs?.setString(
-      _prefsGeradasKey,
+      _chaveGeradas,
       jsonEncode(_geradas.map((q) => q.toJson()).toList()),
     );
   }
@@ -104,7 +124,7 @@ class QuestaoRepository {
 
   void _carregarDoPrefs() {
     if (_prefs == null) return;
-    final jsonStr = _prefs.getString(_prefsKey);
+    final jsonStr = _prefs.getString(_chaveIntervalos);
     if (jsonStr != null && jsonStr.isNotEmpty) {
       try {
         final Map<String, dynamic> data = jsonDecode(jsonStr);
@@ -124,7 +144,7 @@ class QuestaoRepository {
     final jsonStr = jsonEncode(
       _intervals.map((k, v) => MapEntry(k, v.toMap())),
     );
-    _prefs.setString(_prefsKey, jsonStr);
+    _prefs.setString(_chaveIntervalos, jsonStr);
   }
 
   /// Retorna todas as questões (conteúdo da API + geradas).

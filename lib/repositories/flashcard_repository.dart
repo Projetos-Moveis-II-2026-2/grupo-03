@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/card_ingles.dart';
 import '../models/srs_interval.dart';
 import '../services/conteudo_api.dart';
 
 /// Repositório REST dos flashcards e persistência local dos intervalos SRS.
-class FlashcardRepository {
+class FlashcardRepository extends ChangeNotifier {
   static const String _prefsKey = 'srs_flashcards_intervals';
 
   /// Acertos consecutivos no SRS para considerar uma palavra "dominada".
@@ -31,6 +32,12 @@ class FlashcardRepository {
   /// `carregar()` substitui a lista remota, e persistem no aparelho.
   static const String _prefsGeradosKey = 'focodeck_cards_gerados';
   final List<CardIngles> _gerados = [];
+  String _usuarioId = '';
+
+  String get _chaveIntervalos =>
+      _usuarioId.isEmpty ? _prefsKey : '${_prefsKey}_$_usuarioId';
+  String get _chaveGerados =>
+      _usuarioId.isEmpty ? _prefsGeradosKey : '${_prefsGeradosKey}_$_usuarioId';
 
   FlashcardRepository({SharedPreferences? prefs, ConteudoApi? api})
     : _prefs = prefs,
@@ -40,11 +47,26 @@ class FlashcardRepository {
       _intervals[card.id] = SrsInterval();
     }
     _carregarDoPrefs();
-    _carregarGerados();
+    _carregarGeradosDoPrefs();
   }
 
-  void _carregarGerados() {
-    final raw = _prefs?.getString(_prefsGeradosKey);
+  /// Define o usuário ativo para isolar intervalos SRS e cartões gerados.
+  void definirUsuario(String usuarioId) {
+    final id = usuarioId.trim().toLowerCase();
+    if (id == _usuarioId) return;
+    _usuarioId = id;
+    _gerados.clear();
+    _intervals.clear();
+    for (final card in _cards) {
+      _intervals[card.id] = SrsInterval();
+    }
+    _carregarDoPrefs();
+    _carregarGeradosDoPrefs();
+    notifyListeners();
+  }
+
+  void _carregarGeradosDoPrefs() {
+    final raw = _prefs?.getString(_chaveGerados);
     if (raw == null || raw.isEmpty) return;
     try {
       final lista = jsonDecode(raw);
@@ -71,12 +93,14 @@ class FlashcardRepository {
       _intervals.putIfAbsent(card.id, SrsInterval.new);
     }
     _prefs?.setString(
-      _prefsGeradosKey,
+      _chaveGerados,
       jsonEncode(_gerados.map((c) => c.toJson()).toList()),
     );
+    notifyListeners();
   }
 
   bool get hasCachedCards => _carregado && _cards.isNotEmpty;
+  bool get hasRemoteData => _remotoCarregado;
 
   /// Busca conteúdo da tabela documentada `cards_vocabulario`, mantendo o
   /// último resultado em memória para navegação e uso durante a sessão.
@@ -101,6 +125,7 @@ class FlashcardRepository {
       }
       _carregado = true;
       _remotoCarregado = true;
+      notifyListeners();
       return getAll();
     });
     _carregamento = request;
@@ -109,7 +134,7 @@ class FlashcardRepository {
 
   void _carregarDoPrefs() {
     if (_prefs == null) return;
-    final jsonStr = _prefs.getString(_prefsKey);
+    final jsonStr = _prefs.getString(_chaveIntervalos);
     if (jsonStr != null && jsonStr.isNotEmpty) {
       try {
         final Map<String, dynamic> data = jsonDecode(jsonStr);
@@ -129,7 +154,7 @@ class FlashcardRepository {
     final jsonStr = jsonEncode(
       _intervals.map((k, v) => MapEntry(k, v.toMap())),
     );
-    _prefs.setString(_prefsKey, jsonStr);
+    _prefs.setString(_chaveIntervalos, jsonStr);
   }
 
   /// Retorna todos os flashcards (conteúdo da API + gerados).
@@ -148,6 +173,7 @@ class FlashcardRepository {
   void saveInterval(String cardId, SrsInterval intervalo) {
     _intervals[cardId] = intervalo;
     _salvarNoPrefs();
+    notifyListeners();
   }
 
   /// Quantidade de cartões com revisão vencida (disponíveis agora).

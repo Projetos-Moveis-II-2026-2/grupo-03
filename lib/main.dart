@@ -76,11 +76,23 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<SessaoUsuario>.value(value: sessaoAtiva),
-        Provider<FlashcardRepository>(
+        ChangeNotifierProxyProvider<SessaoUsuario, FlashcardRepository>(
           create: (_) => flashcardRepository ?? FlashcardRepository(),
+          update: (_, sessao, repo) {
+            final repository =
+                repo ?? flashcardRepository ?? FlashcardRepository();
+            repository.definirUsuario(sessao.estaLogado ? (sessao.id ?? '') : '');
+            return repository;
+          },
         ),
-        Provider<QuestaoRepository>(
+        ProxyProvider<SessaoUsuario, QuestaoRepository>(
           create: (_) => questaoRepository ?? QuestaoRepository(),
+          update: (_, sessao, repo) {
+            final repository =
+                repo ?? questaoRepository ?? QuestaoRepository();
+            repository.definirUsuario(sessao.estaLogado ? (sessao.id ?? '') : '');
+            return repository;
+          },
         ),
         // Recarrega o progresso sempre que o usuário logado muda.
         ChangeNotifierProxyProvider<SessaoUsuario, ProgressoController>(

@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/progresso_controller.dart';
+import '../models/sessao_usuario.dart';
 import '../repositories/flashcard_repository.dart';
 import '../repositories/progresso_repository.dart';
 import '../repositories/questao_repository.dart';
@@ -31,7 +32,12 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        Provider(create: (_) => FlashcardRepository(prefs: prefs)),
+        ChangeNotifierProvider<SessaoUsuario>.value(
+          value: SessaoUsuario.instance,
+        ),
+        ChangeNotifierProvider<FlashcardRepository>(
+          create: (_) => FlashcardRepository(prefs: prefs),
+        ),
         Provider(create: (_) => QuestaoRepository(prefs: prefs)),
         ChangeNotifierProvider.value(value: progresso),
       ],
