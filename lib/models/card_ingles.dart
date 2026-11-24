@@ -74,15 +74,12 @@ class CardIngles {
   factory CardIngles.fromJson(Map<String, dynamic> json) {
     return CardIngles(
       id: '${json['id'] ?? ''}',
-      termo: (json['termo'] ?? json['palavra'] ?? '') as String,
-      fonetica:
-          (json['fonetica'] ?? json['pronuncia_fonetica'] ?? '') as String,
-      traducao: (json['traducao'] ?? '') as String,
-      exemploIngles:
-          (json['exemploIngles'] ?? json['exemplo_ingles'] ?? '') as String,
-      traducaoExemplo:
-          (json['traducaoExemplo'] ?? json['traducao_exemplo'] ?? '') as String,
-      categoria: (json['categoria'] ?? '') as String,
+      termo: (json['termo'] ?? json['palavra'])?.toString() ?? '',
+      fonetica: (json['fonetica'] ?? json['pronuncia_fonetica'])?.toString() ?? '',
+      traducao: json['traducao']?.toString() ?? '',
+      exemploIngles: (json['exemploIngles'] ?? json['exemplo_ingles'])?.toString() ?? '',
+      traducaoExemplo: (json['traducaoExemplo'] ?? json['traducao_exemplo'])?.toString() ?? '',
+      categoria: json['categoria']?.toString() ?? '',
     );
   }
 

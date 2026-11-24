@@ -81,6 +81,11 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
   }
 
   void _inicializarController(List<CardIngles> cards) {
+    if (_controllerInicializado) {
+      _controller.dispose();
+    }
+    _blocoRegistrado = false;
+    _recompensa = null;
     _controller = FlashcardController(
       _repo,
       cardsCustomizados: cards,
@@ -91,7 +96,9 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
       if (mounted) setState(() {});
     });
     _controllerInicializado = true;
-    _cronometro.start();
+    _cronometro
+      ..reset()
+      ..start();
   }
 
   Future<void> _carregarCards({bool atualizar = false}) async {
@@ -104,7 +111,13 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
       if (!mounted) return;
       final filtrados = _filtrarCards(cards);
       if (filtrados.isEmpty) throw StateError('Conteúdo indisponível');
-      if (!_controllerInicializado) _inicializarController(filtrados);
+      final blocoIntacto = !_controllerInicializado ||
+          (_controller.currentIndex == 0 &&
+              _controller.cardsRevisadosComSucesso == 0 &&
+              _controller.cardsParaRepetir == 0);
+      if (blocoIntacto || atualizar) {
+        _inicializarController(filtrados);
+      }
       setState(() {
         _carregando = false;
         _falhaConexao = false;

@@ -90,15 +90,19 @@ class QuestaoSimulado {
   ];
 
   factory QuestaoSimulado.fromJson(Map<String, dynamic> json) {
+    final rawOpcoes = json['opcoes'] ?? json['alternativas'];
+    final rawIndice = json['indiceCorreto'] ?? json['indice_correto'];
+
     return QuestaoSimulado(
       id: '${json['id'] ?? ''}',
-      enunciado: (json['enunciado'] ?? json['pergunta'] ?? '') as String,
-      opcoes: List<String>.from(
-        json['opcoes'] as List? ?? json['alternativas'] as List? ?? const [],
-      ),
-      indiceCorreto:
-          (json['indiceCorreto'] ?? json['indice_correto'] ?? 0) as int,
-      explicacao: (json['explicacao'] ?? '') as String,
+      enunciado: (json['enunciado'] ?? json['pergunta'])?.toString() ?? '',
+      opcoes: rawOpcoes is List
+          ? rawOpcoes.map((e) => e.toString()).toList()
+          : const <String>[],
+      indiceCorreto: rawIndice is num
+          ? rawIndice.toInt()
+          : int.tryParse('${rawIndice ?? 0}') ?? 0,
+      explicacao: json['explicacao']?.toString() ?? '',
       // `?.toString()` aceita FK numérica ou texto vinda do Supabase.
       cardId: (json['cardId'] ?? json['card_id'])?.toString(),
     );

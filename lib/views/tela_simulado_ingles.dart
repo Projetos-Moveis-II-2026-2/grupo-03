@@ -81,10 +81,14 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     try {
       final questoes = await repo.carregar(atualizar: atualizar);
       if (!mounted) return;
-      if (questoes.isEmpty) throw StateError('Conteúdo indisponível');
-      if (!_controllerInicializado) {
-        final filtradas = _filtrarQuestoes(questoes);
-        if (filtradas.isEmpty) throw StateError('Conteúdo indisponível');
+      final filtradas = _filtrarQuestoes(questoes);
+      if (filtradas.isEmpty) throw StateError('Conteúdo indisponível');
+      final blocoIntacto = !_controllerInicializado ||
+          (_controller.currentIndex == 0 &&
+              _controller.correctAnswers == 0 &&
+              _controller.wrongAnswers == 0 &&
+              !_jaRespondeu);
+      if (blocoIntacto || atualizar) {
         _inicializarController(repo, filtradas);
       }
       setState(() {
@@ -97,7 +101,8 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
         final cache = widget.questoes?.isNotEmpty == true
             ? widget.questoes!
             : repo.getAll();
-        if (cache.isNotEmpty) _inicializarController(repo, cache);
+        final filtradas = _filtrarQuestoes(cache);
+        if (filtradas.isNotEmpty) _inicializarController(repo, filtradas);
       }
       setState(() {
         _carregando = false;
@@ -121,6 +126,13 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     QuestaoRepository repo,
     List<QuestaoSimulado> questoes,
   ) {
+    if (_controllerInicializado) {
+      _controller.dispose();
+    }
+    _opcaoSelecionada = null;
+    _jaRespondeu = false;
+    _blocoRegistrado = false;
+    _recompensa = null;
     _controller = SrsController(
       repo,
       questoesCustomizadas: questoes,
@@ -132,7 +144,9 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
       if (mounted) setState(() {});
     });
     _controllerInicializado = true;
-    _cronometro.start();
+    _cronometro
+      ..reset()
+      ..start();
   }
 
   /// Registra o bloco no progresso uma única vez, ao concluir.
