@@ -1,11 +1,11 @@
 {
-    "name": "projeto_com_api",
-    "short_name": "projeto_com_api",
+    "name": "FocoDeck",
+    "short_name": "FocoDeck",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Aprendizado de inglês em blocos curtos, com foco em pessoas com TDAH.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

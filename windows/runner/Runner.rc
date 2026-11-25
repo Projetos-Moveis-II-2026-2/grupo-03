@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "projeto_com_api" "\0"
+            VALUE "FileDescription", "FocoDeck" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "projeto_com_api" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
             VALUE "OriginalFilename", "projeto_com_api.exe" "\0"
-            VALUE "ProductName", "projeto_com_api" "\0"
+            VALUE "ProductName", "FocoDeck" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
