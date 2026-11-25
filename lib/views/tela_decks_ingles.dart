@@ -6,6 +6,7 @@ import '../repositories/flashcard_repository.dart';
 import '../theme/app_colors.dart';
 import 'tela_estudo_flashcards.dart';
 import 'tela_gerar_deck.dart';
+import 'tela_simulado_ingles.dart';
 
 /// Modelo simples para representar um Baralho (Deck) de estudo.
 class DeckTema {
@@ -255,6 +256,22 @@ class _TelaDecksInglesState extends State<TelaDecksIngles> {
                             side: const BorderSide(color: AppColors.primary),
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const TelaSimuladoIngles(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.quiz_outlined),
+                          label: const Text('Fazer simulado'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.border),
+                          ),
+                        ),
                         const SizedBox(height: 24),
 
                         if (decksGerados.isNotEmpty) ...[
@@ -358,7 +375,11 @@ class _CardDeckItem extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '${deck.cards.length} flashcards',
+                          deck.cards.length == 1
+                              ? 'Bloco de 1 cartão'
+                              : deck.cards.length <= 5
+                              ? 'Bloco de ${deck.cards.length} cartões'
+                              : 'Blocos de 5 cartões',
                           style: textTheme.labelSmall?.copyWith(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,

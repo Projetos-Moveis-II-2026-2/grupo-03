@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/card_ingles.dart';
+import '../models/srs_interval.dart';
 import '../models/nivel_autoavaliacao.dart';
 import '../controllers/progresso_controller.dart';
 import '../repositories/flashcard_repository.dart';
@@ -23,6 +24,7 @@ class FlashcardController extends ChangeNotifier {
   // Métricas do bloco atual
   int _cardsRevisadosComSucesso = 0;
   int _cardsParaRepetir = 0;
+  final Set<String> _idsParaRever = {};
 
   FlashcardController(
     this._repository, {
@@ -37,6 +39,7 @@ class FlashcardController extends ChangeNotifier {
     _currentIndex = 0;
     _cardsRevisadosComSucesso = 0;
     _cardsParaRepetir = 0;
+    _idsParaRever.clear();
     notifyListeners();
   }
 
@@ -54,6 +57,22 @@ class FlashcardController extends ChangeNotifier {
   int get cardsRevisadosComSucesso => _cardsRevisadosComSucesso;
   int get cardsParaRepetir => _cardsParaRepetir;
 
+  Set<String> get _idsDoBloco => _filaCards.map((c) => c.id).toSet();
+
+  /// Palavras do bloco marcadas como "Rever" ao menos uma vez.
+  int get palavrasParaRever => _idsParaRever.length;
+
+  /// Palavras do bloco (fora as "para rever") que ainda não estão dominadas.
+  int get palavrasAprendendo => _contarEstado(EstadoPalavra.aprendendo);
+
+  /// Palavras do bloco já dominadas segundo o repositório.
+  int get palavrasDominadas => _contarEstado(EstadoPalavra.dominada);
+
+  int _contarEstado(EstadoPalavra estado) => _idsDoBloco
+      .difference(_idsParaRever)
+      .where((id) => _repository.estadoDaPalavra(id) == estado)
+      .length;
+
   /// Processa a autoavaliação (Rever, Bom, Fácil) do usuário
   void processarAutoavaliacao(NivelAutoavaliacao nivel) {
     final current = currentCard;
@@ -66,6 +85,7 @@ class FlashcardController extends ChangeNotifier {
     if (nivel == NivelAutoavaliacao.rever) {
       correct = false;
       _cardsParaRepetir++;
+      _idsParaRever.add(current.id);
       // Reinsere o card no final da fila (fixação imediata no mesmo bloco)
       _filaCards.add(current);
     } else {

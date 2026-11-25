@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../models/card_ingles.dart';
 import '../models/nivel_autoavaliacao.dart';
+import '../services/audio_pronuncia.dart';
+import '../services/pronuncia.dart';
 import '../theme/app_colors.dart';
 
 export '../models/nivel_autoavaliacao.dart';
@@ -13,45 +15,15 @@ class FlashcardWidget extends StatefulWidget {
   final CardIngles card;
   final ValueChanged<NivelAutoavaliacao> onAvaliar;
 
+  /// Injetável para testes; por padrão usa a voz do aparelho.
+  final AudioPronuncia? audio;
+
   const FlashcardWidget({
     super.key,
     required this.card,
     required this.onAvaliar,
+    this.audio,
   });
-
-  static String formatarFoneticaAcessivel(String fonetica) {
-    if (!fonetica.startsWith('/') && !fonetica.startsWith('[')) {
-      return fonetica;
-    }
-    var limpia = fonetica.replaceAll(RegExp(r'[/\[\]]'), '');
-    const mapTokens = <String, String>{
-      'tʃ': 'tch',
-      'dʒ': 'dj',
-      'ʃ': 'ch',
-      'θ': 'th',
-      'ð': 'th',
-      'iː': 'ii',
-      'uː': 'uu',
-      'ə': 'â',
-      'æ': 'é',
-      'ɔː': 'ó',
-      'ɑː': 'á',
-      'eɪ': 'êi',
-      'aɪ': 'ái',
-      'oʊ': 'ôu',
-      'aʊ': 'áu',
-      'ˈ': "''",
-      'ˌ': "''",
-      'ɹ': 'r',
-      'ɪ': 'i',
-      'ʊ': 'u',
-    };
-    final sortedKeys = mapTokens.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
-    for (final key in sortedKeys) {
-      limpia = limpia.replaceAll(key, mapTokens[key]!);
-    }
-    return limpia;
-  }
 
   @override
   State<FlashcardWidget> createState() => FlashcardWidgetState();
@@ -95,8 +67,26 @@ class FlashcardWidgetState extends State<FlashcardWidget>
     }
   }
 
+  AudioPronuncia get _audio => widget.audio ?? AudioPronuncia.padrao;
+
+  Future<void> _ouvir() async {
+    final tocou = await _audio.falar(widget.card.termo);
+    if (tocou || !mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'O áudio não está disponível agora. '
+            'Você pode seguir pela pronúncia escrita.',
+          ),
+        ),
+      );
+  }
+
   @override
   void dispose() {
+    _audio.parar();
     _controller.dispose();
     super.dispose();
   }
@@ -138,6 +128,7 @@ class FlashcardWidgetState extends State<FlashcardWidget>
 
   Widget _construirFaceFrente(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final pronuncia = aportuguesarFonetica(widget.card.fonetica);
     final minAltura = (MediaQuery.sizeOf(context).height * 0.42).clamp(240.0, 340.0);
 
     return InkWell(
@@ -188,35 +179,31 @@ class FlashcardWidgetState extends State<FlashcardWidget>
                   ),
                 ),
                 const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.volume_up_rounded,
-                        size: 18,
-                        color: AppColors.primary,
+                Tooltip(
+                  message: 'Ouvir pronúncia',
+                  child: TextButton.icon(
+                    onPressed: _ouvir,
+                    icon: const Icon(Icons.volume_up_rounded, size: 18),
+                    label: Text(pronuncia.isEmpty ? 'Ouvir' : pronuncia),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                      foregroundColor: AppColors.primary,
+                      backgroundColor: AppColors.primary.withValues(
+                        alpha: 0.08,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        FlashcardWidget.formatarFoneticaAcessivel(widget.card.fonetica),
-                        style: textTheme.titleSmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
+                      textStyle: textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
                       ),
-                    ],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
                 // Frase contextual em inglês
-                Container(
+                if (widget.card.exemploIngles.isNotEmpty) Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppColors.background,
@@ -337,7 +324,7 @@ class FlashcardWidgetState extends State<FlashcardWidget>
                 ),
               ),
               const SizedBox(height: 16),
-              Container(
+              if (widget.card.traducaoExemplo.isNotEmpty) Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

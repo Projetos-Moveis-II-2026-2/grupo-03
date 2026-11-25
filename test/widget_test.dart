@@ -87,9 +87,9 @@ void main() {
 
     // Itens de Menu
     expect(find.text('Editar perfil'), findsOneWidget);
-    expect(find.text('Notificações'), findsOneWidget);
-    expect(find.text('Preferências'), findsOneWidget);
-    expect(find.text('Meus dados'), findsOneWidget);
+    expect(find.text('Notificações'), findsNothing);
+    expect(find.text('Preferências'), findsNothing);
+    expect(find.text('Meus dados'), findsNothing);
     expect(find.text('Ajuda e suporte'), findsOneWidget);
 
     // Botão de Logout e diálogo

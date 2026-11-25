@@ -7,7 +7,8 @@ class PalavraCandidata {
   /// Ocorrências por milhão de palavras (indicador de quão comum é).
   final double frequencia;
 
-  /// Classes gramaticais informadas (`n`, `v`, `adj`, `adv`).
+  /// Classes gramaticais informadas (`n`, `v`, `adj`, `adv`) e
+  /// `prop` para nomes próprios.
   final Set<String> classes;
 
   const PalavraCandidata({
@@ -59,22 +60,61 @@ class VocabularioApi {
             ),
           );
 
-  /// Palavras do tema, na ordem de relevância do Datamuse: primeiro as de
-  /// sentido parecido (`ml`), depois as associadas ao tema (`rel_trg`).
+  /// Palavras do tema, da mais para a menos relevante
+  /// (ver [ordenarPorRelevancia]).
   Future<List<PalavraCandidata>> buscarPalavras(
     String tema, {
     int maximo = 40,
   }) async {
     final consultas = await Future.wait([
-      _consultarDatamuse({'ml': tema, 'md': 'fp', 'max': maximo}),
+      // Lista maior: serve para confirmar as palavras associadas.
+      _consultarDatamuse({'ml': tema, 'md': 'fp', 'max': 300}),
       _consultarDatamuse({'rel_trg': tema, 'md': 'fp', 'max': maximo}),
     ]);
+    return ordenarPorRelevancia(
+      parecidas: consultas[0],
+      associadas: consultas[1],
+    );
+  }
+
+  /// Ordena por relevância: primeiro as palavras que aparecem nas duas
+  /// buscas, depois as só associadas (`rel_trg`) e, por último, as só de
+  /// sentido parecido (`ml`), que costumam fugir do tema
+  /// (ex.: "cultivate" para "school").
+  static List<PalavraCandidata> ordenarPorRelevancia({
+    required List<PalavraCandidata> parecidas,
+    required List<PalavraCandidata> associadas,
+  }) {
+    final nasParecidas = parecidas.map((c) => c.palavra).toSet();
     final vistas = <String>{};
     return [
-      for (final lista in consultas)
-        for (final candidata in lista)
-          if (vistas.add(candidata.palavra)) candidata,
+      for (final c in [
+        ...associadas.where((c) => nasParecidas.contains(c.palavra)),
+        ...associadas,
+        ...parecidas,
+      ])
+        if (vistas.add(c.palavra)) c,
     ];
+  }
+
+  /// Escolhe a frase de exemplo mais útil: curta, contendo a palavra e, de
+  /// preferência, usando-a como substantivo. `null` se nenhuma servir.
+  static String? escolherExemplo(
+    String palavra,
+    List<({String classe, String texto})> exemplos,
+  ) {
+    final contem = RegExp(
+      '\\b${RegExp.escape(palavra)}\\b',
+      caseSensitive: false,
+    );
+    final uteis = exemplos.where((e) {
+      final palavras = e.texto.split(RegExp(r'\s+')).length;
+      return contem.hasMatch(e.texto) && palavras >= 4 && palavras <= 14;
+    }).toList();
+    for (final e in uteis) {
+      if (e.classe == 'noun') return e.texto;
+    }
+    return uteis.isEmpty ? null : uteis.first.texto;
   }
 
   Future<List<PalavraCandidata>> _consultarDatamuse(
@@ -106,7 +146,7 @@ class VocabularioApi {
     for (final tag in tags) {
       if (tag.startsWith('f:')) {
         frequencia = double.tryParse(tag.substring(2)) ?? 0;
-      } else if (const {'n', 'v', 'adj', 'adv'}.contains(tag)) {
+      } else if (const {'n', 'v', 'adj', 'adv', 'prop'}.contains(tag)) {
         classes.add(tag);
       }
     }
@@ -117,8 +157,8 @@ class VocabularioApi {
     );
   }
 
-  /// Fonética (IPA) e a primeira frase de exemplo do dicionário.
-  /// Retorna `null` se a palavra não existir ou não tiver exemplo.
+  /// Fonética (IPA) e a melhor frase de exemplo do dicionário.
+  /// Retorna `null` se a palavra não existir; sem frase, exemplo é vazio.
   Future<DetalhesPalavra?> buscarDetalhes(String palavra) async {
     try {
       final resposta = await _dio.get<List<dynamic>>(
@@ -126,7 +166,7 @@ class VocabularioApi {
       );
       final entradas = (resposta.data ?? const []).whereType<Map>().toList();
       String? fonetica;
-      String? exemplo;
+      final exemplos = <({String classe, String texto})>[];
       for (final entrada in entradas) {
         fonetica ??= _textoNaoVazio(entrada['phonetic']);
         for (final f in (entrada['phonetics'] as List? ?? const [])) {
@@ -135,11 +175,20 @@ class VocabularioApi {
         for (final significado in (entrada['meanings'] as List? ?? const [])) {
           if (significado is! Map) continue;
           for (final def in (significado['definitions'] as List? ?? const [])) {
-            if (def is Map) exemplo ??= _textoNaoVazio(def['example']);
+            if (def is! Map) continue;
+            final texto = _textoNaoVazio(def['example']);
+            if (texto == null) continue;
+            exemplos.add((
+              classe: significado['partOfSpeech']?.toString() ?? '',
+              texto: texto,
+            ));
           }
         }
       }
-      if (exemplo == null) return null;
+      if (entradas.isEmpty) return null;
+      // Sem frase adequada, o cartão é criado sem exemplo: a relevância da
+      // palavra para o tema vale mais do que ter uma frase.
+      final exemplo = escolherExemplo(palavra, exemplos) ?? '';
       return DetalhesPalavra(fonetica: fonetica ?? '', exemplo: exemplo);
     } on DioException catch (e) {
       // 404 = palavra sem verbete: apenas descarta a candidata.

@@ -1,3 +1,11 @@
+/// Estado de aprendizagem de uma palavra, derivado do seu [SrsInterval].
+///
+/// - [nova]: ainda não foi estudada;
+/// - [aprendendo]: já foi estudada, mas não atingiu o critério de domínio;
+/// - [dominada]: [SrsInterval.repeticoesParaDominar] acertos seguidos em
+///   revisões espaçadas (dias diferentes).
+enum EstadoPalavra { nova, aprendendo, dominada }
+
 /// Modelo que representa o intervalo de revisão espaçada (SRS) de uma questão.
 ///
 /// Utiliza uma versão simplificada do algoritmo SM‑2, suficiente para a
@@ -17,7 +25,11 @@
 /// Essa classe é **pura** (sem dependências de UI) e pode ser
 /// serializada facilmente para armazenamento futuro (Supabase na Etapa 3).
 class SrsInterval {
-  /// Número de repetições corretas consecutivas.
+  /// Acertos espaçados consecutivos para uma palavra ser "dominada".
+  static const int repeticoesParaDominar = 3;
+
+  /// Número de acertos consecutivos em revisões espaçadas. Treinos feitos
+  /// antes da data da próxima revisão não aumentam este número.
   int repetition;
 
   /// Fator de facilidade – controla o crescimento do intervalo.
@@ -30,6 +42,9 @@ class SrsInterval {
   /// Data da próxima revisão calculada a partir de `DateTime.now()`.
   DateTime nextReview;
 
+  /// Última vez em que o item foi respondido (`null` = nunca estudado).
+  DateTime? ultimaRevisao;
+
   /// Cria um novo intervalo. Por padrão, cartões novos aparecem
   /// imediatamente disponíveis para o primeiro estudo.
   SrsInterval({
@@ -37,14 +52,46 @@ class SrsInterval {
     this.easeFactor = 2.5,
     this.intervalDays = 1,
     DateTime? nextReview,
+    this.ultimaRevisao,
   }) : nextReview = nextReview ?? DateTime.now();
+
+  /// Indica se a revisão já está disponível em [agora].
+  bool estaVencido(DateTime agora) => !nextReview.isAfter(agora);
+
+  EstadoPalavra get estado {
+    if (repetition >= repeticoesParaDominar) return EstadoPalavra.dominada;
+    // Dados salvos por versões antigas não têm `ultimaRevisao`; qualquer
+    // intervalo alterado em relação ao padrão indica que já houve estudo.
+    final estudada =
+        ultimaRevisao != null || repetition > 0 || easeFactor < 2.5;
+    return estudada ? EstadoPalavra.aprendendo : EstadoPalavra.nova;
+  }
+
+  /// Ordem de prioridade: vencidos primeiro, depois a revisão mais próxima
+  /// e, em empate, o item praticado há mais tempo.
+  static int compararPrioridade(SrsInterval a, SrsInterval b, DateTime agora) {
+    final vencidoA = a.estaVencido(agora);
+    if (vencidoA != b.estaVencido(agora)) return vencidoA ? -1 : 1;
+    final porData = a.nextReview.compareTo(b.nextReview);
+    if (porData != 0) return porData;
+    final inicio = DateTime.fromMillisecondsSinceEpoch(0);
+    return (a.ultimaRevisao ?? inicio).compareTo(b.ultimaRevisao ?? inicio);
+  }
 
   /// Atualiza o intervalo com base no resultado da última tentativa.
   ///
   /// - `correct` – `true` se o usuário acertou a questão.
   /// - `isEasy` - `true` se o usuário achou muito fácil, o que turbina o intervalo.
+  /// - `agora` - momento da resposta (injetável para testes).
+  ///
+  /// Um acerto antes da revisão vencer é treino extra: não avança o domínio
+  /// nem a agenda. Assim, refazer o bloco no mesmo dia não "domina" a palavra.
   /// - Retorna a própria instância para permitir encadeamento.
-  SrsInterval update(bool correct, {bool isEasy = false}) {
+  SrsInterval update(bool correct, {bool isEasy = false, DateTime? agora}) {
+    final momento = agora ?? DateTime.now();
+    ultimaRevisao = momento;
+    if (correct && !estaVencido(momento)) return this;
+
     if (correct) {
       // Acertou – aumenta a sequência de repetições.
       repetition += 1;
@@ -68,8 +115,13 @@ class SrsInterval {
       easeFactor = (easeFactor - 0.2).clamp(1.3, double.infinity);
       intervalDays = 1;
     }
-    // Recalcula a data da próxima revisão.
-    nextReview = DateTime.now().add(Duration(days: intervalDays));
+    // A revisão vence no início do dia: quem estudou à noite pode revisar
+    // na manhã seguinte.
+    nextReview = DateTime(
+      momento.year,
+      momento.month,
+      momento.day + intervalDays,
+    );
     return this;
   }
 
@@ -79,6 +131,7 @@ class SrsInterval {
         'easeFactor': easeFactor,
         'intervalDays': intervalDays,
         'nextReview': nextReview.toIso8601String(),
+        'ultimaRevisao': ultimaRevisao?.toIso8601String(),
       };
 
   /// Cria uma instância a partir de um `Map`.
@@ -88,6 +141,9 @@ class SrsInterval {
         intervalDays: map['intervalDays'] as int? ?? 1,
         nextReview: DateTime.parse(map['nextReview'] as String? ??
             DateTime.now().toIso8601String()),
+        ultimaRevisao: DateTime.tryParse(
+          map['ultimaRevisao'] as String? ?? '',
+        ),
       );
 
   Map<String, dynamic> toJson() => toMap();

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/questao_simulado.dart';
 import '../models/srs_interval.dart';
 import '../services/conteudo_api.dart';
+import '../services/gerador_conteudo_service.dart';
 
 /// Repositório REST das questões e persistência local dos intervalos SRS.
 class QuestaoRepository {
@@ -79,9 +80,13 @@ class QuestaoRepository {
 
   /// Adiciona (ou substitui, pelo id) questões geradas automaticamente.
   void adicionarGeradas(List<QuestaoSimulado> novas) {
-    final ids = novas.map((q) => q.id).toSet();
+    final temas = novas
+        .map((q) => GeradorConteudoService.prefixoDoTema(q.id))
+        .toSet();
     _geradas
-      ..removeWhere((q) => ids.contains(q.id))
+      ..removeWhere(
+        (q) => temas.contains(GeradorConteudoService.prefixoDoTema(q.id)),
+      )
       ..addAll(novas);
     for (final questao in novas) {
       _intervals.putIfAbsent(questao.id, SrsInterval.new);
@@ -189,12 +194,7 @@ class QuestaoRepository {
       final intA = getInterval(a.id);
       final intB = getInterval(b.id);
 
-      final isDueA = !intA.nextReview.isAfter(now) ? 0 : 1;
-      final isDueB = !intB.nextReview.isAfter(now) ? 0 : 1;
-
-      if (isDueA != isDueB) return isDueA.compareTo(isDueB);
-
-      return intA.nextReview.compareTo(intB.nextReview);
+      return SrsInterval.compararPrioridade(intA, intB, now);
     });
 
     return sourceList.take(limit).toList();

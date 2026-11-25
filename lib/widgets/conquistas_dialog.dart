@@ -107,7 +107,7 @@ Future<void> mostrarConquistasDialog(BuildContext context) {
                       const SizedBox(height: 6),
                       Text(
                         '${progresso.blocosConcluidos} blocos • '
-                        '$palavrasDominadas palavras • '
+                        '$palavrasDominadas ${palavrasDominadas == 1 ? 'palavra dominada' : 'palavras dominadas'} • '
                         '${progresso.minutosEstudados} min focados',
                         style: textTheme.bodySmall?.copyWith(
                           color: AppColors.primary,
