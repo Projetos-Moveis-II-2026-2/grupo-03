@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../controllers/flashcard_controller.dart';
+import '../controllers/progresso_controller.dart';
+import '../repositories/flashcard_repository.dart';
 import '../models/card_ingles.dart';
+import '../services/recompensa_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
 import '../widgets/flashcard_widget.dart';
+import '../widgets/recompensa_card.dart';
 import 'home_screen.dart';
 import 'tela_decks_ingles.dart';
 
@@ -24,48 +30,145 @@ class TelaEstudoFlashcards extends StatefulWidget {
 }
 
 class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
-  late List<CardIngles> _filaCards;
-  int _indiceAtual = 0;
-  int _cardsRevisadosComSucesso = 0;
-  int _cardsParaRepetir = 0;
-  bool _blocoFinalizado = false;
+  late FlashcardController _controller;
+  late final FlashcardRepository _repo;
+  bool _carregando = true;
+  bool _erroCarga = false;
+  bool _falhaConexao = false;
+  bool _controllerInicializado = false;
+  ProgressoController? _progresso;
+
+  /// Mede o tempo efetivo do bloco para os "minutos estudados".
+  final Stopwatch _cronometro = Stopwatch();
+  bool _blocoRegistrado = false;
+
+  /// Micro-recompensa sorteada ao concluir o bloco.
+  ResultadoRecompensa? _recompensa;
 
   @override
   void initState() {
     super.initState();
-    _iniciarBloco();
+    FlashcardRepository repo;
+    try {
+      repo = context.read<FlashcardRepository>();
+    } on ProviderNotFoundException {
+      repo = FlashcardRepository();
+    }
+    _repo = repo;
+    try {
+      _progresso = context.read<ProgressoController>();
+    } on ProviderNotFoundException {
+      _progresso = null;
+    }
+    final cache = _filtrarCards(_repo.getAll());
+    if (cache.isNotEmpty) {
+      _inicializarController(cache);
+      _carregando = false;
+    }
+    _carregarCards();
   }
 
-  void _iniciarBloco() {
-    setState(() {
-      _filaCards = List<CardIngles>.from(
-        widget.cardsCustomizados ?? CardIngles.cardsIniciais,
-      );
-      _indiceAtual = 0;
-      _cardsRevisadosComSucesso = 0;
-      _cardsParaRepetir = 0;
-      _blocoFinalizado = false;
+  List<CardIngles> _filtrarCards(List<CardIngles> cards) {
+    final selecionados = widget.cardsCustomizados;
+    if (selecionados == null || selecionados.isEmpty) return cards;
+
+    final ids = selecionados.map((card) => card.id).toSet();
+    final porId = cards.where((card) => ids.contains(card.id)).toList();
+    if (porId.isNotEmpty) return porId;
+
+    final categorias = selecionados.map((card) => card.categoria).toSet();
+    return cards.where((card) => categorias.contains(card.categoria)).toList();
+  }
+
+  void _inicializarController(List<CardIngles> cards) {
+    if (_controllerInicializado) {
+      _controller.dispose();
+    }
+    _blocoRegistrado = false;
+    _recompensa = null;
+    _controller = FlashcardController(
+      _repo,
+      cardsCustomizados: cards,
+      progresso: _progresso,
+    );
+    _controller.addListener(() {
+      _registrarBlocoSeConcluido();
+      if (mounted) setState(() {});
     });
+    _controllerInicializado = true;
+    _cronometro
+      ..reset()
+      ..start();
+  }
+
+  Future<void> _carregarCards({bool atualizar = false}) async {
+    setState(() {
+      _carregando = !_controllerInicializado;
+      _erroCarga = false;
+    });
+    try {
+      final cards = await _repo.carregar(atualizar: atualizar);
+      if (!mounted) return;
+      final filtrados = _filtrarCards(cards);
+      if (filtrados.isEmpty) throw StateError('Conteúdo indisponível');
+      final blocoIntacto = !_controllerInicializado ||
+          (_controller.currentIndex == 0 &&
+              _controller.cardsRevisadosComSucesso == 0 &&
+              _controller.cardsParaRepetir == 0);
+      if (blocoIntacto || atualizar) {
+        _inicializarController(filtrados);
+      }
+      setState(() {
+        _carregando = false;
+        _falhaConexao = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      if (!_controllerInicializado) {
+        final cache = widget.cardsCustomizados?.isNotEmpty == true
+            ? widget.cardsCustomizados!
+            : _repo.getAll();
+        final filtrados = _filtrarCards(cache);
+        if (filtrados.isNotEmpty) _inicializarController(filtrados);
+      }
+      setState(() {
+        _carregando = false;
+        _erroCarga = !_controllerInicializado;
+        _falhaConexao = true;
+      });
+    }
+  }
+
+  /// Registra o bloco no progresso uma única vez, ao concluir.
+  void _registrarBlocoSeConcluido() {
+    if (_blocoRegistrado || !_controller.isFinished) return;
+    _blocoRegistrado = true;
+    _cronometro.stop();
+    final acertos = _controller.cardsRevisadosComSucesso;
+    final total = acertos + _controller.cardsParaRepetir;
+    _progresso?.registrarBlocoConcluido(
+      duracao: _cronometro.elapsed,
+      acertos: acertos,
+      total: total,
+    );
+    _recompensa = RecompensaService.padrao.concederAoConcluirBloco(
+      acertos: acertos,
+      total: total,
+      palavrasDominadas: _repo.contarDominados(),
+      progresso: _progresso,
+    );
+  }
+
+  @override
+  void dispose() {
+    if (_controllerInicializado) {
+      _controller.dispose();
+    }
+    super.dispose();
   }
 
   void _processarAutoavaliacao(NivelAutoavaliacao nivel) {
-    final cardAtual = _filaCards[_indiceAtual];
-
-    setState(() {
-      if (nivel == NivelAutoavaliacao.rever) {
-        _cardsParaRepetir++;
-        // Reinsere o card no final da fila para fixação imediata no mesmo bloco
-        _filaCards.add(cardAtual);
-      } else {
-        _cardsRevisadosComSucesso++;
-      }
-
-      if (_indiceAtual + 1 < _filaCards.length) {
-        _indiceAtual++;
-      } else {
-        _blocoFinalizado = true;
-      }
-    });
+    _controller.processarAutoavaliacao(nivel);
   }
 
   @override
@@ -87,9 +190,43 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: _blocoFinalizado
-                  ? _construirTelaConclusao(context)
-                  : _construirFluxoEstudo(context, textTheme),
+              child: _carregando && !_controllerInicializado
+                  ? const CircularProgressIndicator()
+                  : _erroCarga
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Não foi possível carregar os cartões. Verifique sua conexão.',
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () => _carregarCards(atualizar: true),
+                          child: const Text('Tentar novamente'),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (_carregando) const LinearProgressIndicator(),
+                        if (_falhaConexao) ...[
+                          const Text(
+                            'Sem conexão. Você pode continuar com os cartões disponíveis.',
+                            textAlign: TextAlign.center,
+                          ),
+                          TextButton(
+                            onPressed: () => _carregarCards(atualizar: true),
+                            child: const Text('Tentar novamente'),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        _controller.isFinished
+                            ? _construirTelaConclusao(context)
+                            : _construirFluxoEstudo(context, textTheme),
+                      ],
+                    ),
             ),
           ),
         ),
@@ -98,8 +235,8 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
   }
 
   Widget _construirFluxoEstudo(BuildContext context, TextTheme textTheme) {
-    final progresso = (_indiceAtual + 1) / _filaCards.length;
-    final cardAtual = _filaCards[_indiceAtual];
+    final progresso = (_controller.currentIndex + 1) / _controller.totalCards;
+    final cardAtual = _controller.currentCard!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -116,7 +253,7 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
               ),
             ),
             Text(
-              'Card ${_indiceAtual + 1} de ${_filaCards.length}',
+              'Card ${_controller.currentIndex + 1} de ${_controller.totalCards}',
               style: textTheme.labelMedium?.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.bold,
@@ -142,7 +279,7 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
 
         // Componente interativo do Flashcard
         FlashcardWidget(
-          key: ValueKey(cardAtual.id + _indiceAtual.toString()),
+          key: ValueKey(cardAtual.id + _controller.currentIndex.toString()),
           card: cardAtual,
           onAvaliar: _processarAutoavaliacao,
         ),
@@ -204,6 +341,10 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
             ),
           ),
           const SizedBox(height: 24),
+          if (_recompensa != null) ...[
+            RecompensaCard(resultado: _recompensa!),
+            const SizedBox(height: 24),
+          ],
 
           // Resumo estatístico do bloco
           Container(
@@ -217,12 +358,12 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
               children: [
                 _ItemResumo(
                   label: 'Dominadas',
-                  valor: '$_cardsRevisadosComSucesso',
+                  valor: '${_controller.cardsRevisadosComSucesso}',
                   cor: AppColors.success,
                 ),
                 _ItemResumo(
                   label: 'Revisadas',
-                  valor: '$_cardsParaRepetir',
+                  valor: '${_controller.cardsParaRepetir}',
                   cor: AppColors.primary,
                 ),
               ],

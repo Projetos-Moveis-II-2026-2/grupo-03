@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/sessao_usuario.dart';
 import '../theme/app_colors.dart';
@@ -22,6 +23,7 @@ class _TelaCadastroState extends State<TelaCadastro> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _enviando = false;
 
   @override
   void dispose() {
@@ -32,25 +34,79 @@ class _TelaCadastroState extends State<TelaCadastro> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_enviando) return;
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
+    setState(() => _enviando = true);
+    try {
+      final autenticado = await SessaoUsuario.of(context).cadastrarNoSupabase(
+        nome: _nameController.text,
+        email: _emailController.text,
+        senha: _passwordController.text,
+      );
+      if (!mounted) return;
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            autenticado
+                ? 'Conta criada com sucesso!'
+                : 'Confira sua caixa de entrada e o spam para confirmar seu e-mail. '
+                      'Se já possui uma conta, utilize o login.',
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      if (autenticado) {
+        if (!Navigator.canPop(context)) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute<void>(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          Navigator.popUntil(context, (route) => route.isFirst);
+        }
+      } else {
+        Navigator.pop(context);
+      }
+    } on AuthRetryableFetchException {
+      if (!mounted) return;
+      _mostrarErro(
+        'Não foi possível conectar ao servidor. '
+        'Verifique sua conexão e tente novamente.',
+      );
+    } on AuthException catch (erro) {
+      if (!mounted) return;
+      final mensagem = switch (erro.code) {
+        'user_already_exists' ||
+        'email_exists' => 'Este e-mail já está cadastrado. Utilize o login.',
+        'weak_password' => 'Escolha uma senha mais forte para sua conta.',
+        'email_address_invalid' ||
+        'validation_failed' => 'Verifique o e-mail e os dados informados.',
+        'over_email_send_rate_limit' || 'over_request_rate_limit' =>
+          'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+        'signup_disabled' || 'email_provider_disabled' =>
+          'O cadastro está indisponível no momento. Tente mais tarde.',
+        _ =>
+          'Não foi possível criar sua conta. Verifique os dados e tente novamente.',
+      };
+      _mostrarErro(mensagem);
+    } catch (_) {
+      if (!mounted) return;
+      _mostrarErro(
+        'Não foi possível concluir o cadastro. '
+        'Verifique sua conexão e tente novamente.',
+      );
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
 
-    SessaoUsuario.instance.cadastrar(
-      nome: _nameController.text,
-      email: _emailController.text,
-    );
-
+  void _mostrarErro(String mensagem) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Conta criada com sucesso!'),
-        backgroundColor: AppColors.success,
-      ),
-    );
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute<void>(builder: (context) => const HomeScreen()),
+      SnackBar(content: Text(mensagem), backgroundColor: AppColors.error),
     );
   }
 
@@ -208,7 +264,10 @@ class _TelaCadastroState extends State<TelaCadastro> {
                           },
                         ),
                         const SizedBox(height: 28),
-                        AppButton(text: 'Criar conta', onPressed: _submit),
+                        AppButton(
+                          text: _enviando ? 'Criando conta...' : 'Criar conta',
+                          onPressed: _enviando ? null : _submit,
+                        ),
                       ],
                     ),
                   ),

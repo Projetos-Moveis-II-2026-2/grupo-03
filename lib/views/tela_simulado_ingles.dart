@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../controllers/progresso_controller.dart';
+import '../controllers/srs_controller.dart';
+import '../repositories/flashcard_repository.dart';
+import '../repositories/questao_repository.dart';
 import '../models/questao_simulado.dart';
+import '../services/recompensa_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
+import '../widgets/recompensa_card.dart';
 import 'home_screen.dart';
 
 /// Tela simples de Simulado / Quiz de Inglês em bloco curto (5 questões),
@@ -17,17 +24,155 @@ class TelaSimuladoIngles extends StatefulWidget {
 }
 
 class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
-  late final List<QuestaoSimulado> _listaQuestoes;
-  int _indiceAtual = 0;
+  late SrsController _controller;
+  late QuestaoRepository _repo;
+  bool _carregando = true;
+  bool _erroCarga = false;
+  bool _falhaConexao = false;
+  bool _controllerInicializado = false;
+  ProgressoController? _progresso;
+  FlashcardRepository? _flashcards;
+
+  /// Mede o tempo efetivo do bloco para os "minutos estudados".
+  final Stopwatch _cronometro = Stopwatch();
+  bool _blocoRegistrado = false;
+
+  /// Micro-recompensa sorteada ao concluir o bloco.
+  ResultadoRecompensa? _recompensa;
   int? _opcaoSelecionada;
   bool _jaRespondeu = false;
-  int _acertos = 0;
-  bool _simuladoConcluido = false;
 
   @override
   void initState() {
     super.initState();
-    _listaQuestoes = widget.questoes ?? QuestaoSimulado.simuladoInicial;
+    QuestaoRepository repo;
+    try {
+      repo = context.read<QuestaoRepository>();
+    } on ProviderNotFoundException {
+      repo = QuestaoRepository();
+    }
+    _repo = repo;
+    try {
+      _progresso = context.read<ProgressoController>();
+    } on ProviderNotFoundException {
+      _progresso = null;
+    }
+    try {
+      _flashcards = context.read<FlashcardRepository>();
+    } on ProviderNotFoundException {
+      _flashcards = null;
+    }
+    final cache = _filtrarQuestoes(_repo.getAll());
+    if (cache.isNotEmpty) {
+      _inicializarController(_repo, cache);
+      _carregando = false;
+    }
+    _carregarQuestoes(repo);
+  }
+
+  Future<void> _carregarQuestoes(
+    QuestaoRepository repo, {
+    bool atualizar = false,
+  }) async {
+    setState(() {
+      _carregando = !_controllerInicializado;
+      _erroCarga = false;
+    });
+    try {
+      final questoes = await repo.carregar(atualizar: atualizar);
+      if (!mounted) return;
+      final filtradas = _filtrarQuestoes(questoes);
+      if (filtradas.isEmpty) throw StateError('Conteúdo indisponível');
+      final blocoIntacto = !_controllerInicializado ||
+          (_controller.currentIndex == 0 &&
+              _controller.correctAnswers == 0 &&
+              _controller.wrongAnswers == 0 &&
+              !_jaRespondeu);
+      if (blocoIntacto || atualizar) {
+        _inicializarController(repo, filtradas);
+      }
+      setState(() {
+        _carregando = false;
+        _falhaConexao = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      if (!_controllerInicializado) {
+        final cache = widget.questoes?.isNotEmpty == true
+            ? widget.questoes!
+            : repo.getAll();
+        final filtradas = _filtrarQuestoes(cache);
+        if (filtradas.isNotEmpty) _inicializarController(repo, filtradas);
+      }
+      setState(() {
+        _carregando = false;
+        _erroCarga = !_controllerInicializado;
+        _falhaConexao = true;
+      });
+    }
+  }
+
+  List<QuestaoSimulado> _filtrarQuestoes(List<QuestaoSimulado> questoes) {
+    final selecionadas = widget.questoes;
+    if (selecionadas == null || selecionadas.isEmpty) return questoes;
+    final ids = selecionadas.map((questao) => questao.id).toSet();
+    final correspondentes = questoes
+        .where((questao) => ids.contains(questao.id))
+        .toList();
+    return correspondentes.isNotEmpty ? correspondentes : selecionadas;
+  }
+
+  void _inicializarController(
+    QuestaoRepository repo,
+    List<QuestaoSimulado> questoes,
+  ) {
+    if (_controllerInicializado) {
+      _controller.dispose();
+    }
+    _opcaoSelecionada = null;
+    _jaRespondeu = false;
+    _blocoRegistrado = false;
+    _recompensa = null;
+    _controller = SrsController(
+      repo,
+      questoesCustomizadas: questoes,
+      progresso: _progresso,
+      flashcards: _flashcards,
+    );
+    _controller.addListener(() {
+      _registrarBlocoSeConcluido();
+      if (mounted) setState(() {});
+    });
+    _controllerInicializado = true;
+    _cronometro
+      ..reset()
+      ..start();
+  }
+
+  /// Registra o bloco no progresso uma única vez, ao concluir.
+  void _registrarBlocoSeConcluido() {
+    if (_blocoRegistrado || !_controller.isFinished) return;
+    _blocoRegistrado = true;
+    _cronometro.stop();
+    _progresso?.registrarBlocoConcluido(
+      duracao: _cronometro.elapsed,
+      acertos: _controller.correctAnswers,
+      total: _controller.totalQuestions,
+    );
+    _recompensa = RecompensaService.padrao.concederAoConcluirBloco(
+      acertos: _controller.correctAnswers,
+      total: _controller.totalQuestions,
+      palavrasDominadas: _flashcards?.contarDominados() ?? 0,
+      progresso: _progresso,
+    );
+  }
+
+  @override
+  void dispose() {
+    if (_controllerInicializado) {
+      _controller.dispose();
+    }
+    super.dispose();
   }
 
   void _selecionarOpcao(int indice) {
@@ -36,31 +181,30 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
     setState(() {
       _opcaoSelecionada = indice;
       _jaRespondeu = true;
-      if (indice == _listaQuestoes[_indiceAtual].indiceCorreto) {
-        _acertos++;
-      }
     });
   }
 
   void _avancarQuestao() {
+    if (_opcaoSelecionada != null) {
+      _controller.processAnswer(_opcaoSelecionada!);
+    }
+
     setState(() {
-      if (_indiceAtual + 1 < _listaQuestoes.length) {
-        _indiceAtual++;
-        _opcaoSelecionada = null;
-        _jaRespondeu = false;
-      } else {
-        _simuladoConcluido = true;
-      }
+      _opcaoSelecionada = null;
+      _jaRespondeu = false;
     });
   }
 
   void _reiniciarSimulado() {
+    _blocoRegistrado = false;
+    _recompensa = null;
+    _cronometro
+      ..reset()
+      ..start();
+    _controller.restartBlock();
     setState(() {
-      _indiceAtual = 0;
       _opcaoSelecionada = null;
       _jaRespondeu = false;
-      _acertos = 0;
-      _simuladoConcluido = false;
     });
   }
 
@@ -83,9 +227,45 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: _simuladoConcluido
-                  ? _construirTelaResultado(context, textTheme)
-                  : _construirPergunta(context, textTheme),
+              child: _carregando && !_controllerInicializado
+                  ? const CircularProgressIndicator()
+                  : _erroCarga
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Não foi possível carregar as questões. Verifique sua conexão.',
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () =>
+                              _carregarQuestoes(_repo, atualizar: true),
+                          child: const Text('Tentar novamente'),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (_carregando) const LinearProgressIndicator(),
+                        if (_falhaConexao) ...[
+                          const Text(
+                            'Sem conexão. Você pode continuar com as questões disponíveis.',
+                            textAlign: TextAlign.center,
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                _carregarQuestoes(_repo, atualizar: true),
+                            child: const Text('Tentar novamente'),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        _controller.isFinished
+                            ? _construirTelaResultado(context, textTheme)
+                            : _construirPergunta(context, textTheme),
+                      ],
+                    ),
             ),
           ),
         ),
@@ -94,8 +274,9 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   }
 
   Widget _construirPergunta(BuildContext context, TextTheme textTheme) {
-    final questao = _listaQuestoes[_indiceAtual];
-    final progresso = (_indiceAtual + 1) / _listaQuestoes.length;
+    final questao = _controller.currentQuestion!;
+    final progresso =
+        (_controller.currentIndex + 1) / _controller.totalQuestions;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -112,7 +293,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
               ),
             ),
             Text(
-              'Questão ${_indiceAtual + 1} de ${_listaQuestoes.length}',
+              'Questão ${_controller.currentIndex + 1} de ${_controller.totalQuestions}',
               style: textTheme.labelMedium?.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.bold,
@@ -132,6 +313,13 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
         ),
+
+        // Selo da recomendação adaptativa (IA): deixa visível ao estudante
+        // que o bloco foi montado a partir das palavras que ele mais errou.
+        if (_controller.blocoAdaptativo) ...[
+          const SizedBox(height: 16),
+          _SeloBlocoAdaptativo(termos: _controller.termosEmFoco),
+        ],
 
         const SizedBox(height: 24),
 
@@ -201,7 +389,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
           ),
           const SizedBox(height: 20),
           AppButton(
-            text: _indiceAtual + 1 < _listaQuestoes.length
+            text: _controller.currentIndex + 1 < _controller.totalQuestions
                 ? 'Próxima questão'
                 : 'Ver resultado',
             onPressed: _avancarQuestao,
@@ -269,7 +457,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
   }
 
   Widget _construirTelaResultado(BuildContext context, TextTheme textTheme) {
-    final aproveitamento = (_acertos / _listaQuestoes.length) * 100;
+    final aproveitamento = _controller.successRate;
 
     return Container(
       padding: const EdgeInsets.all(28),
@@ -318,6 +506,10 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
             ),
           ),
           const SizedBox(height: 24),
+          if (_recompensa != null) ...[
+            RecompensaCard(resultado: _recompensa!),
+            const SizedBox(height: 24),
+          ],
 
           // Painel de acertos
           Container(
@@ -332,7 +524,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
                 Column(
                   children: [
                     Text(
-                      '$_acertos / ${_listaQuestoes.length}',
+                      '${_controller.correctAnswers} / ${_controller.totalQuestions}',
                       style: textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -373,10 +565,7 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
 
           const SizedBox(height: 28),
 
-          AppButton(
-            text: 'Refazer simulado',
-            onPressed: _reiniciarSimulado,
-          ),
+          AppButton(text: 'Refazer simulado', onPressed: _reiniciarSimulado),
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: () {
@@ -396,6 +585,41 @@ class _TelaSimuladoInglesState extends State<TelaSimuladoIngles> {
               side: const BorderSide(color: AppColors.border),
             ),
             child: const Text('Voltar ao início'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Selo discreto informando que o bloco prioriza os pontos fracos.
+class _SeloBlocoAdaptativo extends StatelessWidget {
+  final List<String> termos;
+
+  const _SeloBlocoAdaptativo({required this.termos});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final detalhe = termos.isEmpty ? '' : ': ${termos.join(', ')}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Text('🎯', style: TextStyle(fontSize: 18)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Bloco focado nas palavras que você mais precisa rever$detalhe',
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

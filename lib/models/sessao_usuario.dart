@@ -1,28 +1,72 @@
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Gerenciador de sessão do usuário atual no FocoDeck.
 ///
 /// Mantém os dados da conta conectada (nome e e-mail) em memória
 /// e notifica os ouvintes (HomeScreen, TelaPerfil, etc.) em caso de alteração.
+enum EtapaRecuperacao { solicitar, redefinir, invalida }
+
 class SessaoUsuario extends ChangeNotifier {
   SessaoUsuario._();
 
   static final SessaoUsuario instance = SessaoUsuario._();
 
-  // Banco de usuários cadastrados em memória
-  final Map<String, String> _usuariosCadastrados = {
-    'emily@email.com': 'Emily Vitória',
-  };
+  Session? _sessao;
+  EtapaRecuperacao? _recuperacao;
+  EtapaRecuperacao? get recuperacao => _recuperacao;
+  String? _idRecuperacao;
 
-  String _nome = 'Emily Vitória';
-  String _email = 'emily@email.com';
+  Future<void> solicitarRecuperacao(String email) async {
+    final destino = kIsWeb
+        ? Uri.base.resolve('?fluxo=recuperacao').toString()
+        : null;
+    await _auth.resetPasswordForEmail(email.trim(), redirectTo: destino);
+  }
 
-  String get nome => _nome;
-  String get email => _email;
+  Future<void> abrirRecuperacao(Uri retorno) async {
+    try {
+      final resposta = await _auth.getSessionFromUrl(retorno);
+      if (!['passwordRecovery', 'recovery'].contains(resposta.redirectType)) {
+        throw const AuthException('Link inválido');
+      }
+      _idRecuperacao = resposta.session.user.id;
+      _recuperacao = EtapaRecuperacao.redefinir;
+    } catch (_) {
+      _recuperacao = EtapaRecuperacao.invalida;
+    }
+    _sincronizar();
+  }
+
+  Future<void> redefinirSenha(String senha) async {
+    if (_idRecuperacao == null || _auth.currentUser?.id != _idRecuperacao) {
+      throw const AuthException('Sessão de recuperação inválida');
+    }
+    await _auth.updateUser(UserAttributes(password: senha));
+  }
+
+  void concluirRecuperacao() {
+    _idRecuperacao = null;
+    _recuperacao = null;
+    notifyListeners();
+  }
+
+  StreamSubscription<AuthState>? _eventos;
+  GoTrueClient get _auth => Supabase.instance.client.auth;
+  String? get id => _sessao?.user.id;
+  String get email => _sessao?.user.email ?? '';
+  String get nome =>
+      _sessao?.user.userMetadata?['nome'] as String? ?? 'Estudante';
+  bool get estaLogado => _sessao != null;
 
   /// Retorna o primeiro nome para saudações personalizadas (ex: "Olá, Emily! 👋")
   String get primeiroNome {
-    final partes = _nome.trim().split(RegExp(r'\s+'));
+    final partes = nome.trim().split(RegExp(r'\s+'));
     return partes.isNotEmpty && partes.first.isNotEmpty
         ? partes.first
         : 'Estudante';
@@ -30,7 +74,7 @@ class SessaoUsuario extends ChangeNotifier {
 
   /// Retorna as iniciais do nome do usuário (ex: "EV" para Emily Vitória)
   String get iniciais {
-    final partes = _nome
+    final partes = nome
         .trim()
         .split(RegExp(r'\s+'))
         .where((p) => p.isNotEmpty)
@@ -42,54 +86,82 @@ class SessaoUsuario extends ChangeNotifier {
     return '${partes.first[0]}${partes.last[0]}'.toUpperCase();
   }
 
-  /// Realiza login do usuário com base no e-mail informado
-  void login({required String email}) {
-    final emailFormatado = email.trim().toLowerCase();
-    _email = email.trim();
+  static SessaoUsuario of(BuildContext context, {bool listen = false}) {
+    try {
+      return Provider.of<SessaoUsuario>(context, listen: listen);
+    } on ProviderNotFoundException {
+      return instance;
+    }
+  }
 
-    if (_usuariosCadastrados.containsKey(emailFormatado)) {
-      _nome = _usuariosCadastrados[emailFormatado]!;
-    } else {
-      // Se for um novo e-mail não registrado previamente, deriva o nome do usuário
-      final prefixo = email.split('@').first;
-      final partes = prefixo.split(RegExp(r'[._\-]'));
-      final derivado = partes
-          .where((p) => p.isNotEmpty)
-          .map((p) => '${p[0].toUpperCase()}${p.substring(1)}')
-          .join(' ');
-      _nome = derivado.isNotEmpty ? derivado : 'Estudante';
-      _usuariosCadastrados[emailFormatado] = _nome;
+  Future<void> carregar(SharedPreferences prefs) async {
+    await prefs.remove('focodeck_usuarios');
+    await prefs.remove('focodeck_sessao_ativa');
+    await _eventos?.cancel();
+    _sincronizar();
+    _eventos = _auth.onAuthStateChange.listen(
+      (_) => _sincronizar(),
+      onError: (Object erro) => _sincronizar(),
+    );
+  }
+
+  void _sincronizar() {
+    _sessao = _auth.currentSession;
+    if (_recuperacao == EtapaRecuperacao.redefinir && id != _idRecuperacao) {
+      _recuperacao = EtapaRecuperacao.invalida;
+      _idRecuperacao = null;
     }
     notifyListeners();
   }
 
-  /// Registra um novo usuário a partir do formulário de cadastro
-  void cadastrar({required String nome, required String email}) {
-    final emailFormatado = email.trim().toLowerCase();
-    _nome = nome.trim();
-    _email = email.trim();
-    _usuariosCadastrados[emailFormatado] = _nome;
-    notifyListeners();
-  }
-
-  /// Atualiza o perfil (nome e e-mail) do usuário conectado
-  void atualizarPerfil({required String nome, required String email}) {
-    final emailAntigo = _email.trim().toLowerCase();
-    final emailNovo = email.trim().toLowerCase();
-
-    if (emailAntigo != emailNovo) {
-      _usuariosCadastrados.remove(emailAntigo);
+  Future<void> login({required String email, required String senha}) async {
+    final resposta = await _auth.signInWithPassword(
+      email: email.trim(),
+      password: senha,
+    );
+    if (resposta.session == null) {
+      throw const AuthException('Sessão indisponível');
     }
-    _nome = nome.trim();
-    _email = email.trim();
-    _usuariosCadastrados[emailNovo] = _nome;
-    notifyListeners();
+    _sincronizar();
   }
 
-  /// Finaliza a sessão do usuário
-  void logout() {
-    _nome = 'Estudante';
-    _email = '';
-    notifyListeners();
+  /// Cadastra no Auth sem armazenar a senha ou criar uma sessão local.
+  /// Retorna false quando ainda é necessário confirmar o e-mail.
+  Future<bool> cadastrarNoSupabase({
+    required String nome,
+    required String email,
+    required String senha,
+  }) async {
+    final resposta = await Supabase.instance.client.auth.signUp(
+      email: email.trim(),
+      password: senha,
+      data: {'nome': nome.trim()},
+    );
+    final sessao = resposta.session;
+    if (sessao == null) return false;
+
+    _sincronizar();
+    return true;
+  }
+
+  Future<void> atualizarPerfil({
+    required String nome,
+    required String email,
+  }) async {
+    await _auth.updateUser(
+      UserAttributes(
+        data: {'nome': nome.trim()},
+        email: email.trim() == this.email ? null : email.trim(),
+      ),
+    );
+    _sincronizar();
+  }
+
+  Future<void> logout() async {
+    try {
+      await _auth.signOut(scope: SignOutScope.local);
+    } finally {
+      _sincronizar();
+    }
   }
 }

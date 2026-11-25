@@ -1,17 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../controllers/progresso_controller.dart';
+import '../models/card_ingles.dart';
+import '../models/sessao_usuario.dart';
+import '../repositories/flashcard_repository.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
+import '../widgets/conquistas_dialog.dart';
 import 'tela_decks_ingles.dart';
 import 'tela_estudo_flashcards.dart';
 import 'tela_perfil.dart';
 import 'tela_simulado_ingles.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final repo = _lerFlashcardRepository(context);
+      if (!repo.hasRemoteData) {
+        repo.carregar().catchError((_) => <CardIngles>[]);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final sessao = SessaoUsuario.of(context, listen: true);
+    // Métricas reais: a Home é reconstruída sempre que um bloco é concluído.
+    final progresso = ProgressoController.of(context, listen: true);
+    final flashcardRepo = _lerFlashcardRepository(context, listen: true);
+    final pendentes = flashcardRepo.contarPendentes();
+    final dominadas = flashcardRepo.contarDominados();
+    final ofensiva = progresso.ofensiva;
     // A tipografia e o fundo são herdados do AppTheme do aplicativo.
     final textTheme = Theme.of(context).textTheme;
 
@@ -32,7 +62,7 @@ class HomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Olá, estudante! 👋',
+                              'Olá, ${sessao.primeiroNome}! 👋',
                               style: textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -75,14 +105,16 @@ class HomeScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '🔥 7 dias',
+                            '🔥 ${formatarDias(ofensiva)}',
                             style: textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Sequência de estudos',
+                            ofensiva == 0
+                                ? 'Comece sua sequência hoje'
+                                : 'Sequência de estudos',
                             style: textTheme.titleMedium,
                           ),
                         ],
@@ -94,19 +126,23 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           Text('Meta diária', style: textTheme.titleLarge),
                           const SizedBox(height: 12),
-                          const Text('3 de 5 revisões concluídas'),
+                          Text(
+                            '${progresso.revisoesHoje.clamp(0, ProgressoController.metaDiaria)} '
+                            'de ${ProgressoController.metaDiaria} revisões concluídas',
+                          ),
                           const SizedBox(height: 12),
                           LinearProgressIndicator(
-                            value: 0.6,
+                            value: progresso.progressoMetaDiaria,
                             minHeight: 8,
                             borderRadius: BorderRadius.circular(8),
                             color: AppColors.success,
                             backgroundColor: AppColors.border,
                             semanticsLabel: 'Meta diária',
-                            semanticsValue: '60%',
+                            semanticsValue:
+                                '${(progresso.progressoMetaDiaria * 100).round()}%',
                           ),
                           const SizedBox(height: 12),
-                          const Text('Você está quase lá!'),
+                          Text(_mensagemMeta(progresso)),
                         ],
                       ),
                     ),
@@ -140,7 +176,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                '12 flashcards esperando por você',
+                                _mensagemPendentes(pendentes),
                                 style: textTheme.bodyLarge?.copyWith(
                                   color: AppColors.card,
                                 ),
@@ -162,7 +198,8 @@ class HomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute<void>(
-                                  builder: (context) => const TelaEstudoFlashcards(),
+                                  builder: (context) =>
+                                      const TelaEstudoFlashcards(),
                                 ),
                               );
                             },
@@ -217,13 +254,27 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const _HomeCard(
+                  _HomeCard(
                     child: Wrap(
                       spacing: 48,
                       runSpacing: 24,
                       children: [
-                        _ProgressItem(value: '24', label: 'revisões'),
-                        _ProgressItem(value: '85%', label: 'de acertos'),
+                        _ProgressItem(
+                          value: '${progresso.minutosEstudados} min',
+                          label: 'estudados',
+                        ),
+                        _ProgressItem(
+                          value: '$dominadas',
+                          label: dominadas == 1
+                              ? 'palavra dominada'
+                              : 'palavras dominadas',
+                        ),
+                        _ProgressItem(
+                          value: progresso.blocosConcluidos == 0
+                              ? '—'
+                              : '${progresso.taxaAcerto.round()}%',
+                          label: 'de acertos',
+                        ),
                       ],
                     ),
                   ),
@@ -239,12 +290,19 @@ class HomeScreen extends StatelessWidget {
         indicatorColor: AppColors.highlight,
         elevation: 0,
         onDestinationSelected: (index) {
-          if (index == 3) {
+          if (index == 1) {
             Navigator.push(
               context,
               MaterialPageRoute<void>(
-                builder: (context) => const TelaPerfil(),
+                builder: (context) => const TelaDecksIngles(),
               ),
+            );
+          } else if (index == 2) {
+            mostrarConquistasDialog(context);
+          } else if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute<void>(builder: (context) => const TelaPerfil()),
             );
           }
         },
@@ -273,6 +331,33 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Formata a ofensiva no singular/plural (ex.: "1 dia", "3 dias").
+String formatarDias(int dias) => dias == 1 ? '1 dia' : '$dias dias';
+
+FlashcardRepository _lerFlashcardRepository(
+  BuildContext context, {
+  bool listen = false,
+}) {
+  try {
+    return Provider.of<FlashcardRepository>(context, listen: listen);
+  } on ProviderNotFoundException {
+    return FlashcardRepository();
+  }
+}
+
+String _mensagemPendentes(int pendentes) {
+  if (pendentes == 0) return 'Tudo revisado por agora! Que tal reforçar?';
+  if (pendentes == 1) return '1 flashcard esperando por você';
+  return '$pendentes flashcards esperando por você';
+}
+
+/// Mensagem acolhedora da meta diária (sem cobrança nem culpa).
+String _mensagemMeta(ProgressoController progresso) {
+  if (progresso.metaDiariaBatida) return 'Meta cumprida! Mandou bem 🎉';
+  if (progresso.revisoesHoje == 0) return 'Um bloco curto já vale o dia 💜';
+  return 'Você está quase lá!';
 }
 
 class _HomeCard extends StatelessWidget {

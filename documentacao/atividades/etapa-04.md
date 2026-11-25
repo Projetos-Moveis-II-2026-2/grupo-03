@@ -3,48 +3,44 @@
 ## 1. Identificação da Atividade
 
 - **Etapa:** 4
-- **Título:** Gamificação Leve e Aleatória Adaptada para TDAH, Bateria de Testes e Entrega Final
-- **Dupla Responsável:** **JP** e **Raquel**
-- **Status da Etapa:** Aguardando Conclusão da Etapa 3
+- **Título:** Gamificação Leve para TDAH, Recomendação Adaptativa (IA), Testes e Entrega Final (`.aab`)
+- **Responsáveis:** **Raquel** e **JP**
+- **Status da Etapa:** Planejada (Aguardando Etapa 3)
 
 ---
 
 ## 2. Escopo da Entrega
 
-> *"Desenvolvimento da gamificação leve e aleatória, Testes e Entrega Final"*
+> *"Desenvolvimento da gamificação leve e aleatória, recurso de adaptação inteligente aos pontos fracos do estudante, bateria de testes automatizados e geração do pacote final Android App Bundle (.aab)."*
 
 ---
 
-## 3. Diretriz de Gamificação Leve & Aleatória para TDAH
+## 3. Diretrizes Técnicas e Pedagógicas da Etapa 4
 
-O FocoDeck adota um modelo de **gamificação leve, acolhedora e aleatória**:
-- **Recompensas Aleatórias Intermitentes:** Ao concluir um bloco curto de inglês (5 cards), o app sorteia ocasionalmente uma mensagem divertida de incentivo cultural em inglês ou um pequeno badge ("*Word Master!*"). Esse padrão intermitente estimula a dopamina de forma positiva sem sobrecarregar.
-- **Ofensivas Flexíveis (Streak com Margem):** O estudante celebra seus dias de estudo de inglês sem ser punido desproporcionalmente por lapsos de rotina.
-- **Celebração do Vocabulário Conquistado:** Métricas visuais claras e simples de palavras dominadas (ex: "25 novas palavras integradas à sua memória de longo prazo este mês").
+1. **Gamificação Leve & Aleatória para TDAH:**
+   - **Recompensas Aleatórias Intermitentes:** Ao concluir um bloco curto de inglês, o app sorteia mensagens de incentivo cultural em inglês ou conquistas leves ("*Word Master!*"), estimulando a motivação sem punições severas.
+   - **Ofensivas Flexíveis e Dashboard Dinâmico:** Atualização em tempo real na `HomeScreen` dos minutos estudados, ofensiva (streak) e total de palavras dominadas.
+2. **Adaptação Inteligente aos Pontos Fracos (IA / Recomendação):**
+   - Geração e priorização inteligente de simulados e revisões focadas nos termos e estruturas em que o usuário apresentou maior dificuldade (`Rever`), atendendo ao requisito de recurso inteligente previsto na proposta.
+3. **Qualidade e Empacotamento Final (`.aab`):**
+   - Execução limpa de testes automatizados (`flutter test`) e geração do pacote oficial de publicação Android App Bundle (`.aab`).
 
 ---
 
-## 4. Divisão de Responsabilidades da Dupla
+## 4. Divisão de Responsabilidades na Etapa 4
 
-### 👤 Raquel (Gamificação Leve & Experiência de Sucesso)
-- **Mecanismo de Recompensas Aleatórias:**
-  - Gerador de micro-estímulos e mensagens motivacionais contextuais em inglês.
-  - Animações sutis e micro-recompensas visuais que respeitam o minimalismo e não geram dispersão.
-- **Dashboard de Progresso em Inglês:**
-  - Atualização dos dados na tela principal (`HomeScreen`): minutos focados, blocos concluídos e palavras revisadas.
-  - Seção de marcos e conquistas no perfil do aluno.
+### 👤 Raquel (Gamificação Leve, IA Adaptativa & Release Final `.aab`)
+- **Mecanismo de Gamificação e Dashboard:**
+  - Gerador de micro-recompensas aleatórias ao final das sessões de estudo.
+  - Conexão dos indicadores da `HomeScreen` e da `TelaPerfil` às métricas reais acumuladas pelo estudante.
+- **Adaptação Inteligente de Simulados (IA):**
+  - Implementação do serviço/motor de recomendação que analisa o histórico de erros do aluno e monta blocos personalizados para reforçar seus pontos fracos.
+- **Build de Produção Android (`.aab`):**
+  - Validação com `flutter analyze` sem erros e compilação do pacote final (`flutter build appbundle`).
 
-### 👤 JP (Testes Automatizados, Performance & Build de Produção)
-- **Bateria de Testes Unitários:**
-  - Testes do algoritmo de repetição espaçada (SRS) de vocabulário.
-  - Testes de regras de pontuação e transição de blocos de quiz.
-  - Teste dos modelos de dados do Supabase.
-- **Testes de Widgets e Interface:**
-  - Teste de renderização e acessibilidade visual dos botões, inputs e cards de inglês.
-- **Preparação da Entrega Final:**
-  - Resolução de advertências de análise estática (`flutter analyze`).
-  - Geração de pacote compilado para Android (APK).
-  - Atualização do `README.md` com guia de execução, credenciais de teste e arquitetura documentada.
+### 👤 JP (Bateria de Testes Automatizados)
+- **Testes Unitários e de Componentes (`test/`):**
+  - Substituição do `widget_test.dart` padrão por testes unitários do algoritmo SRS, serialização dos modelos (`CardIngles`, `QuestaoSimulado`, `SrsInterval`) e testes de widgets (`flutter test`).
 
 ---
 

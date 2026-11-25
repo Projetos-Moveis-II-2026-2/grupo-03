@@ -45,7 +45,8 @@ class CardIngles {
       fonetica: 'kân-SÍS-tên-si',
       traducao: 'Consistência / Constância',
       exemploIngles: 'Small daily consistency brings extraordinary results.',
-      traducaoExemplo: 'Pequena consistência diária traz resultados extraordinários.',
+      traducaoExemplo:
+          'Pequena consistência diária traz resultados extraordinários.',
       categoria: 'Hábitos',
     ),
     CardIngles(
@@ -62,9 +63,35 @@ class CardIngles {
       termo: 'Reward',
       fonetica: 'ri-WÓRD',
       traducao: 'Recompensa / Prêmio',
-      exemploIngles: 'Give your brain a healthy reward after completing a block.',
-      traducaoExemplo: 'Dê ao seu cérebro uma recompensa saudável após concluir um bloco.',
+      exemploIngles:
+          'Give your brain a healthy reward after completing a block.',
+      traducaoExemplo:
+          'Dê ao seu cérebro uma recompensa saudável após concluir um bloco.',
       categoria: 'Neurociência & TDAH',
     ),
   ];
+
+  factory CardIngles.fromJson(Map<String, dynamic> json) {
+    return CardIngles(
+      id: '${json['id'] ?? ''}',
+      termo: (json['termo'] ?? json['palavra'])?.toString() ?? '',
+      fonetica: (json['fonetica'] ?? json['pronuncia_fonetica'])?.toString() ?? '',
+      traducao: json['traducao']?.toString() ?? '',
+      exemploIngles: (json['exemploIngles'] ?? json['exemplo_ingles'])?.toString() ?? '',
+      traducaoExemplo: (json['traducaoExemplo'] ?? json['traducao_exemplo'])?.toString() ?? '',
+      categoria: json['categoria']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'termo': termo,
+      'fonetica': fonetica,
+      'traducao': traducao,
+      'exemploIngles': exemploIngles,
+      'traducaoExemplo': traducaoExemplo,
+      'categoria': categoria,
+    };
+  }
 }

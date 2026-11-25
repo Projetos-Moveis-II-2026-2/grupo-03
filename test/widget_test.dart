@@ -1,3 +1,4 @@
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -6,14 +7,29 @@ import 'package:projeto_com_api/models/sessao_usuario.dart';
 import 'package:projeto_com_api/views/tela_cadastro.dart';
 import 'package:projeto_com_api/views/tela_perfil.dart';
 
-void main() {
-  setUp(() {
-    SessaoUsuario.instance.cadastrar(
-      nome: 'Emily Vitória',
-      email: 'emily@email.com',
-    );
-  });
+class PerfilTeste extends ChangeNotifier implements SessaoUsuario {
+  @override
+  String nome;
+  @override
+  String email;
+  PerfilTeste(this.nome, this.email);
+  @override
+  String get iniciais => nome.split(' ').map((p) => p[0]).take(2).join();
+  @override
+  Future<void> atualizarPerfil({
+    required String nome,
+    required String email,
+  }) async {
+    this.nome = nome;
+    this.email = email;
+    notifyListeners();
+  }
 
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+void main() {
   testWidgets('FocoDeck inicializa com tela de Login e navega para Cadastro', (
     WidgetTester tester,
   ) async {
@@ -52,17 +68,22 @@ void main() {
   testWidgets('TelaPerfil renderiza dados do usuário, gamificação e menus', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MaterialApp(home: TelaPerfil()));
+    await tester.pumpWidget(
+      ChangeNotifierProvider<SessaoUsuario>.value(
+        value: PerfilTeste('Emily Vitória', 'emily@email.com'),
+        child: const MaterialApp(home: TelaPerfil()),
+      ),
+    );
 
     // Cabeçalho e dados do usuário
     expect(find.text('Emily Vitória'), findsOneWidget);
     expect(find.text('emily@email.com'), findsOneWidget);
 
     // Gamificação / Estatísticas Rápidas
-    expect(find.text('4 dias'), findsOneWidget);
-    expect(find.text('320 XP'), findsOneWidget);
-    expect(find.text('Nível'), findsOneWidget);
-    expect(find.text('Estudante'), findsOneWidget);
+    // Estatísticas reais (usuário ainda sem estudo registrado)
+    expect(find.text('0 dias'), findsOneWidget);
+    expect(find.text('palavras dominadas'), findsOneWidget);
+    expect(find.text('0 min'), findsOneWidget);
 
     // Itens de Menu
     expect(find.text('Editar perfil'), findsOneWidget);
@@ -82,36 +103,38 @@ void main() {
     expect(find.text('Sair'), findsOneWidget);
   });
 
-  testWidgets('TelaPerfil permite editar perfil e salvar alterações com sucesso', (
-    WidgetTester tester,
-  ) async {
-    SessaoUsuario.instance.cadastrar(
-      nome: 'Maria Silva',
-      email: 'maria@teste.com',
-    );
-    await tester.pumpWidget(const MaterialApp(home: TelaPerfil()));
+  testWidgets(
+    'TelaPerfil permite editar perfil e salvar alterações com sucesso',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SessaoUsuario>.value(
+          value: PerfilTeste('Maria Silva', 'maria@teste.com'),
+          child: const MaterialApp(home: TelaPerfil()),
+        ),
+      );
 
-    expect(find.text('Maria Silva'), findsOneWidget);
-    expect(find.text('maria@teste.com'), findsOneWidget);
+      expect(find.text('Maria Silva'), findsOneWidget);
+      expect(find.text('maria@teste.com'), findsOneWidget);
 
-    // Tocar em Editar perfil
-    await tester.ensureVisible(find.text('Editar perfil'));
-    await tester.tap(find.text('Editar perfil'));
-    await tester.pumpAndSettle();
+      // Tocar em Editar perfil
+      await tester.ensureVisible(find.text('Editar perfil'));
+      await tester.tap(find.text('Editar perfil'));
+      await tester.pumpAndSettle();
 
-    // Modal de edição aberto
-    expect(find.text('Salvar alterações'), findsOneWidget);
+      // Modal de edição aberto
+      expect(find.text('Salvar alterações'), findsOneWidget);
 
-    // Alterar o nome no campo
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Maria Silva'),
-      'Maria Clara',
-    );
-    await tester.tap(find.text('Salvar alterações'));
-    await tester.pumpAndSettle();
+      // Alterar o nome no campo
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Maria Silva'),
+        'Maria Clara',
+      );
+      await tester.tap(find.text('Salvar alterações'));
+      await tester.pumpAndSettle();
 
-    // Perfil atualizado
-    expect(find.text('Maria Clara'), findsOneWidget);
-    expect(find.text('Perfil atualizado com sucesso!'), findsOneWidget);
-  });
+      // Perfil atualizado
+      expect(find.text('Maria Clara'), findsOneWidget);
+      expect(find.text('Perfil atualizado com sucesso!'), findsOneWidget);
+    },
+  );
 }
