@@ -4,14 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/card_ingles.dart';
 import '../models/srs_interval.dart';
 import '../services/conteudo_api.dart';
+import '../services/gerador_conteudo_service.dart';
 
 /// Repositório REST dos flashcards e persistência local dos intervalos SRS.
 class FlashcardRepository extends ChangeNotifier {
   static const String _prefsKey = 'srs_flashcards_intervals';
-
-  /// Acertos consecutivos no SRS para considerar uma palavra "dominada".
-  /// Após 3 acertos seguidos o intervalo já passa de 1 semana (SM-2).
-  static const int repeticoesParaDominar = 3;
 
   final SharedPreferences? _prefs;
 
@@ -72,7 +69,13 @@ class FlashcardRepository extends ChangeNotifier {
       final lista = jsonDecode(raw);
       if (lista is! List) return;
       for (final item in lista.whereType<Map>()) {
-        final card = CardIngles.fromJson(Map<String, dynamic>.from(item));
+        final json = Map<String, dynamic>.from(item);
+        // Decks salvos por versões antigas traziam o emoji no título.
+        json['categoria'] = json['categoria']
+            ?.toString()
+            .replaceAll('✨', '')
+            .trim();
+        final card = CardIngles.fromJson(json);
         if (card.id.isEmpty) continue;
         _gerados.add(card);
         _intervals.putIfAbsent(card.id, SrsInterval.new);
@@ -83,11 +86,15 @@ class FlashcardRepository extends ChangeNotifier {
   /// Cartões gerados automaticamente, na ordem em que foram criados.
   List<CardIngles> get cardsGerados => List.unmodifiable(_gerados);
 
-  /// Adiciona (ou substitui, pelo id) cartões gerados automaticamente.
+  /// Adiciona cartões gerados, substituindo o deck anterior do mesmo tema.
   void adicionarGerados(List<CardIngles> novos) {
-    final ids = novos.map((c) => c.id).toSet();
+    final temas = novos
+        .map((c) => GeradorConteudoService.prefixoDoTema(c.id))
+        .toSet();
     _gerados
-      ..removeWhere((c) => ids.contains(c.id))
+      ..removeWhere(
+        (c) => temas.contains(GeradorConteudoService.prefixoDoTema(c.id)),
+      )
       ..addAll(novos);
     for (final card in novos) {
       _intervals.putIfAbsent(card.id, SrsInterval.new);
@@ -169,6 +176,9 @@ class FlashcardRepository extends ChangeNotifier {
   /// Obtém o intervalo SRS associado a um cartão.
   SrsInterval getInterval(String cardId) => _intervals[cardId] ?? SrsInterval();
 
+  /// Estado da palavra: fonte única para Home, Perfil, conquistas e resumo.
+  EstadoPalavra estadoDaPalavra(String cardId) => getInterval(cardId).estado;
+
   /// Persiste (ou atualiza) o intervalo de um cartão.
   void saveInterval(String cardId, SrsInterval intervalo) {
     _intervals[cardId] = intervalo;
@@ -189,7 +199,7 @@ class FlashcardRepository extends ChangeNotifier {
 
   /// Quantidade de palavras dominadas pelo estudante (apenas do conteúdo atual).
   int contarDominados() => getAll()
-      .where((c) => getInterval(c.id).repetition >= repeticoesParaDominar)
+      .where((c) => estadoDaPalavra(c.id) == EstadoPalavra.dominada)
       .length;
 
   /// Busca um bloco de flashcards para a próxima sessão de revisão.
@@ -214,12 +224,7 @@ class FlashcardRepository extends ChangeNotifier {
       final intA = getInterval(a.id);
       final intB = getInterval(b.id);
 
-      final isDueA = !intA.nextReview.isAfter(now) ? 0 : 1;
-      final isDueB = !intB.nextReview.isAfter(now) ? 0 : 1;
-
-      if (isDueA != isDueB) return isDueA.compareTo(isDueB);
-
-      return intA.nextReview.compareTo(intB.nextReview);
+      return SrsInterval.compararPrioridade(intA, intB, now);
     });
 
     return sourceList.take(limit).toList();

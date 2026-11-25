@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../models/card_ingles.dart';
 import '../models/questao_simulado.dart';
+import 'temas_prontos.dart';
 import 'vocabulario_api.dart';
 
 /// Deck gerado automaticamente a partir de um tema.
@@ -41,10 +42,10 @@ class GeradorConteudoService {
 
   /// Faixa de frequência (ocorrências por milhão) considerada adequada:
   /// exclui palavras raras ("locomote") e genéricas demais ("go").
-  static const double frequenciaMinima = 2.0;
+  static const double frequenciaMinima = 4.0;
   static const double frequenciaMaxima = 120.0;
 
-  static const int _maxCandidatas = 14;
+  static const int _maxCandidatas = 10;
 
   final VocabularioApi _api;
   final Random _random;
@@ -52,6 +53,37 @@ class GeradorConteudoService {
   GeradorConteudoService({VocabularioApi? api, Random? random})
     : _api = api ?? VocabularioApi(),
       _random = random ?? Random();
+
+  /// Deck dos temas sugeridos, com conteúdo fixo de nível iniciante (não usa
+  /// rede). Retorna `null` se o tema não tiver lista pronta.
+  DeckGerado? deckPronto(String tema, {String? titulo}) {
+    final temaNormalizado = tema.trim().toLowerCase();
+    final palavras = temasProntos[temaNormalizado];
+    if (palavras == null) return null;
+    final tituloDeck = titulo ?? _capitalizar(temaNormalizado);
+    final cards = [
+      for (final p in palavras)
+        CardIngles(
+          id: 'gen_${_slug(temaNormalizado)}_${p.termo.toLowerCase()}',
+          termo: p.termo,
+          fonetica: p.fonetica,
+          traducao: p.traducao,
+          exemploIngles: p.exemplo,
+          traducaoExemplo: p.traducaoExemplo,
+          categoria: tituloDeck,
+        ),
+    ];
+    return DeckGerado(
+      tema: temaNormalizado,
+      titulo: tituloDeck,
+      cards: cards,
+      questoes: gerarQuestoes(cards, random: _random),
+    );
+  }
+
+  /// Prefixo comum aos itens gerados do mesmo tema (`gen_school_`).
+  static String prefixoDoTema(String cardId) =>
+      cardId.substring(0, cardId.lastIndexOf('_') + 1);
 
   /// Gera um deck com até [quantidade] palavras do [tema] (em inglês).
   ///
@@ -92,7 +124,9 @@ class GeradorConteudoService {
       final (candidata, detalhe) = item;
       final resultado = await Future.wait([
         _api.traduzir(candidata.palavra),
-        _api.traduzir(detalhe.exemplo),
+        detalhe.exemplo.isEmpty
+            ? Future.value('')
+            : _api.traduzir(detalhe.exemplo),
       ]);
       if (resultado.contains(null)) return null;
       return (resultado[0]!, resultado[1]!);
@@ -112,7 +146,7 @@ class GeradorConteudoService {
           traducao: _capitalizar(traducao.$1),
           exemploIngles: detalhe.exemplo,
           traducaoExemplo: traducao.$2,
-          categoria: '$tituloDeck ✨',
+          categoria: tituloDeck,
         ),
       );
     }
@@ -166,7 +200,10 @@ class GeradorConteudoService {
     for (final c in candidatas) {
       final palavra = c.palavra.toLowerCase();
       if (!RegExp(r'^[a-z]{3,14}$').hasMatch(palavra)) continue;
+      // Substantivos comuns são os mais concretos para iniciantes.
+      // O Datamuse lista primeiro a classe principal da palavra.
       if (c.classes.isEmpty) continue;
+      if (c.classes.first != 'n' || c.classes.contains('prop')) continue;
       if (c.frequencia < frequenciaMinima || c.frequencia > frequenciaMaxima) {
         continue;
       }
@@ -286,7 +323,7 @@ class GeradorConteudoService {
       indiceCorreto: opcoes.indexOf(correta),
       explicacao:
           '"${card.termo}" significa "${card.traducao}". '
-          'Exemplo: ${card.exemploIngles}',
+          '${card.exemploIngles.isEmpty ? '' : 'Exemplo: ${card.exemploIngles}'}',
     );
   }
 

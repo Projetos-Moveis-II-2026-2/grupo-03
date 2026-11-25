@@ -5,6 +5,7 @@ import '../controllers/flashcard_controller.dart';
 import '../controllers/progresso_controller.dart';
 import '../repositories/flashcard_repository.dart';
 import '../models/card_ingles.dart';
+import '../models/srs_interval.dart';
 import '../services/recompensa_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_button.dart';
@@ -354,19 +355,40 @@ class _TelaEstudoFlashcardsState extends State<TelaEstudoFlashcards> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ItemResumo(
-                  label: 'Dominadas',
-                  valor: '${_controller.cardsRevisadosComSucesso}',
-                  cor: AppColors.success,
+                Expanded(
+                  child: _ItemResumo(
+                    label: 'Aprendendo',
+                    valor: '${_controller.palavrasAprendendo}',
+                    cor: AppColors.primary,
+                  ),
                 ),
-                _ItemResumo(
-                  label: 'Revisadas',
-                  valor: '${_controller.cardsParaRepetir}',
-                  cor: AppColors.primary,
+                Expanded(
+                  child: _ItemResumo(
+                    label: 'Dominadas',
+                    valor: '${_controller.palavrasDominadas}',
+                    cor: AppColors.success,
+                  ),
+                ),
+                Expanded(
+                  child: _ItemResumo(
+                    label: 'Para rever',
+                    valor: '${_controller.palavrasParaRever}',
+                    cor: AppColors.textPrimary,
+                  ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Uma palavra fica dominada após '
+            '${SrsInterval.repeticoesParaDominar} acertos seguidos em dias '
+            'diferentes, quando a revisão dela chega.',
+            textAlign: TextAlign.center,
+            style: textTheme.bodySmall?.copyWith(
+              color: AppColors.textPrimary.withValues(alpha: 0.6),
             ),
           ),
 
@@ -436,6 +458,7 @@ class _ItemResumo extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
+          textAlign: TextAlign.center,
           style: textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary.withValues(alpha: 0.6),

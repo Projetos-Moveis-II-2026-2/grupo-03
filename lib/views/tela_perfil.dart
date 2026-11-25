@@ -205,15 +205,6 @@ class TelaPerfil extends StatelessWidget {
               onPressed: () => _inicio(context),
             ),
             title: const Text('Perfil'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                tooltip: 'Configurações',
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Configurações em breve!')),
-                ),
-              ),
-            ],
           ),
           body: SafeArea(
             child: SingleChildScrollView(
@@ -223,38 +214,17 @@ class TelaPerfil extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 600),
                   child: Column(
                     children: [
-                      Stack(
-                        alignment: Alignment.bottomRight,
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundColor: AppColors.primary,
-                            child: Text(
-                              sessao.iniciais,
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.card,
-                              ),
-                            ),
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppColors.primary,
+                        child: Text(
+                          sessao.iniciais,
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.card,
                           ),
-                          InkWell(
-                            onTap: () => _abrirEdicao(context),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: const BoxDecoration(
-                                color: AppColors.card,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.edit_outlined,
-                                size: 18,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -345,7 +315,7 @@ class TelaPerfil extends StatelessWidget {
     final progresso = ProgressoController.of(context, listen: true);
     FlashcardRepository repo;
     try {
-      repo = context.read<FlashcardRepository>();
+      repo = context.watch<FlashcardRepository>();
     } on ProviderNotFoundException {
       repo = FlashcardRepository();
     }
@@ -435,53 +405,6 @@ class TelaPerfil extends StatelessWidget {
       (
         icon: Icons.edit_outlined,
         title: 'Editar perfil',
-        onTap: () => _abrirEdicao(context),
-      ),
-      (
-        icon: Icons.notifications_none_outlined,
-        title: 'Notificações',
-        onTap: () {
-          showDialog<void>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Notificações'),
-              content: const Text(
-                'Lembretes gentis sem pressão no FocoDeck. Respire e estude no seu próprio ritmo!',
-              ),
-              actions: [
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Entendido'),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-      (
-        icon: Icons.tune_outlined,
-        title: 'Preferências',
-        onTap: () {
-          showDialog<void>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Preferências'),
-              content: const Text(
-                'Preferência padrão de blocos curtos de 5 itens sem cronômetro, ideal para foco e acessibilidade.',
-              ),
-              actions: [
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Fechar'),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-      (
-        icon: Icons.badge_outlined,
-        title: 'Meus dados',
         onTap: () => _abrirEdicao(context),
       ),
       (

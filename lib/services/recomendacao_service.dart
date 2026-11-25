@@ -39,7 +39,8 @@ class RecomendacaoService {
   static const double proporcaoFoco = 0.7;
 
   static const double _easeInicial = 2.5;
-  static const int _repeticoesDominio = 3;
+  static const int _repeticoesDominio =
+      SrsInterval.repeticoesParaDominar;
 
   const RecomendacaoService();
 

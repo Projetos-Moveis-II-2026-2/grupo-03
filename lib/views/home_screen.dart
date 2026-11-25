@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/flashcard_controller.dart';
 import '../controllers/progresso_controller.dart';
 import '../models/card_ingles.dart';
 import '../models/sessao_usuario.dart';
@@ -11,7 +12,6 @@ import '../widgets/conquistas_dialog.dart';
 import 'tela_decks_ingles.dart';
 import 'tela_estudo_flashcards.dart';
 import 'tela_perfil.dart';
-import 'tela_simulado_ingles.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -55,48 +55,16 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Olá, ${sessao.primeiroNome}! 👋',
-                              style: textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Vamos manter o foco hoje?',
-                              style: textTheme.bodyLarge,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(24),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (context) => const TelaPerfil(),
-                            ),
-                          );
-                        },
-                        child: const CircleAvatar(
-                          radius: 24,
-                          backgroundColor: AppColors.primary,
-                          child: Icon(
-                            Icons.person_outline,
-                            color: AppColors.card,
-                            semanticLabel: 'Perfil',
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'Olá, ${sessao.primeiroNome}! 👋',
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Vamos manter o foco hoje?',
+                    style: textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 28),
                   _AdaptivePair(
@@ -138,8 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: AppColors.success,
                             backgroundColor: AppColors.border,
                             semanticsLabel: 'Meta diária',
-                            semanticsValue:
-                                '${(progresso.progressoMetaDiaria * 100).round()}%',
                           ),
                           const SizedBox(height: 12),
                           Text(_mensagemMeta(progresso)),
@@ -176,7 +142,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                _mensagemPendentes(pendentes),
+                                mensagemRevisao(
+                                  pendentes: pendentes,
+                                  metaBatida: progresso.metaDiariaBatida,
+                                ),
                                 style: textTheme.bodyLarge?.copyWith(
                                   color: AppColors.card,
                                 ),
@@ -193,7 +162,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           child: AppButton(
-                            text: 'Começar agora',
+                            text: progresso.metaDiariaBatida
+                                ? 'Fazer mais um bloco'
+                                : 'Começar agora',
                             onPressed: () {
                               Navigator.push(
                                 context,
@@ -206,44 +177,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Continuar estudando',
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _AdaptivePair(
-                    first: _StudyCard(
-                      title: 'Flashcards',
-                      subtitle: 'Revise seus conteúdos',
-                      icon: Icons.style_outlined,
-                      accent: AppColors.primary,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (context) => const TelaDecksIngles(),
-                          ),
-                        );
-                      },
-                    ),
-                    second: _StudyCard(
-                      title: 'Simulados',
-                      subtitle: 'Teste seus conhecimentos',
-                      icon: Icons.quiz_outlined,
-                      accent: AppColors.success,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (context) => const TelaSimuladoIngles(),
-                          ),
-                        );
-                      },
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -273,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           value: progresso.blocosConcluidos == 0
                               ? '—'
                               : '${progresso.taxaAcerto.round()}%',
-                          label: 'de acertos',
+                          label: 'de acertos no total',
                         ),
                       ],
                     ),
@@ -347,10 +280,15 @@ FlashcardRepository _lerFlashcardRepository(
   }
 }
 
-String _mensagemPendentes(int pendentes) {
+/// Convite para o próximo bloco curto. Nunca mostra o total acumulado de
+/// cartões, que pode assustar e contradizer a meta cumprida.
+String mensagemRevisao({required int pendentes, required bool metaBatida}) {
   if (pendentes == 0) return 'Tudo revisado por agora! Que tal reforçar?';
-  if (pendentes == 1) return '1 flashcard esperando por você';
-  return '$pendentes flashcards esperando por você';
+  final bloco = pendentes.clamp(1, FlashcardController.maxCardsPerBlock);
+  if (metaBatida) return 'Quer fazer mais um bloco de $bloco?';
+  return bloco == 1
+      ? 'Seu bloco de 1 cartão está pronto'
+      : 'Seu bloco de $bloco cartões está pronto';
 }
 
 /// Mensagem acolhedora da meta diária (sem cobrança nem culpa).
@@ -402,43 +340,6 @@ class _AdaptivePair extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _StudyCard extends StatelessWidget {
-  const _StudyCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.accent,
-    this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color accent;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: _HomeCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: accent, size: 32),
-            const SizedBox(height: 16),
-            Text(title, style: textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(subtitle, style: textTheme.bodyMedium),
-          ],
-        ),
-      ),
     );
   }
 }

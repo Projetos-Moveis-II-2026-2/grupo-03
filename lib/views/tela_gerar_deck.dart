@@ -20,7 +20,8 @@ class TemaSugerido {
   const TemaSugerido(this.tema, this.rotulo, this.emoji);
 }
 
-/// Tela de geração automática de decks: o estudante escolhe um tema e o app
+/// Tela de geração automática de decks. Temas sugeridos usam listas prontas
+/// (`temas_prontos.dart`); para temas digitados, o app
 /// busca palavras (Datamuse), exemplos (Free Dictionary) e traduções
 /// (MyMemory), montando flashcards e um simulado prontos para estudar.
 class TelaGerarDeck extends StatefulWidget {
@@ -75,7 +76,15 @@ class _TelaGerarDeckState extends State<TelaGerarDeck> {
       _deck = null;
     });
     try {
-      final deck = await _gerador.gerarDeck(tema, titulo: titulo);
+      final rotulo =
+          titulo ??
+          TelaGerarDeck.sugestoes
+              .where((s) => s.tema == tema.toLowerCase())
+              .firstOrNull
+              ?.rotulo;
+      final deck =
+          _gerador.deckPronto(tema, titulo: rotulo) ??
+          await _gerador.gerarDeck(tema, titulo: titulo);
       if (!mounted) return;
       _salvar(deck);
       setState(() => _deck = deck);
@@ -121,15 +130,16 @@ class _TelaGerarDeckState extends State<TelaGerarDeck> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Escolha um tema ✨',
+                    'Escolha um tema',
                     style: textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'O FocoDeck busca palavras do tema, exemplos e traduções '
-                    'e monta um bloco curto de flashcards e um simulado.',
+                    'Os temas abaixo usam listas prontas para iniciantes. Temas '
+                    'digitados usam dicionários on-line, sem inteligência '
+                    'artificial.',
                     style: textTheme.bodyMedium?.copyWith(
                       color: AppColors.textPrimary.withValues(alpha: 0.7),
                     ),

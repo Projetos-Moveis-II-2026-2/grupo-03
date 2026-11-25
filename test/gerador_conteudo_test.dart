@@ -27,7 +27,7 @@ CardIngles _card(String termo, String traducao, {String? exemplo}) =>
       traducao: traducao,
       exemploIngles: exemplo ?? 'I like the ${termo.toLowerCase()} a lot.',
       traducaoExemplo: '',
-      categoria: 'Teste ✨',
+      categoria: 'Teste',
     );
 
 /// API simulada: sem rede, respostas controladas.
@@ -182,7 +182,7 @@ void main() {
       expect(primeiro.termo, 'Trip');
       expect(primeiro.traducao, 'Pt-trip');
       expect(primeiro.fonetica, '/trip/');
-      expect(primeiro.categoria, 'Viagem ✨');
+      expect(primeiro.categoria, 'Viagem');
       expect(deck.questoes, hasLength(deck.cards.length));
       expect(
         deck.questoes.map((q) => q.cardId).toSet(),
