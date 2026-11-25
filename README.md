@@ -62,7 +62,6 @@ A equipe é composta por 4 integrantes (**JP, Raquel, Emily e Maria**), com a se
 ### Pendências conhecidas
 
 - Gerar e testar o pacote `.aab` assinado.
-- Trocar o nome exibido no Android de `projeto_com_api` para `FocoDeck`.
 - Sincronizar o progresso e o SRS com o Supabase: hoje ficam **somente no aparelho**, separados por conta, e se perdem ao reinstalar o app. Detalhes em [pendências da Etapa 3](documentacao/pendencias-etapa-3-parte-2.md).
 - Sem internet, as palavras dos decks embutidos fora de "Foco & Produtividade" não entram nos contadores.
 - Temas digitados dependem de APIs gratuitas, que têm limite de uso e podem trazer traduções imprecisas.
